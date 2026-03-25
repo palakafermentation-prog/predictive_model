@@ -28,10 +28,11 @@ export default async function VerifyEmailPage({ searchParams }: Props) {
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <Image src="/logo.png" alt="Palaka Fermentation" width={80} height={80} className="mx-auto mb-4 dark:brightness-0 dark:invert" />
+          <h1 className="text-2xl font-semibold tracking-tight">Email Verification</h1>
         </div>
         <Card>
           <CardContent className="pt-6 text-center space-y-4">
-            <div className="text-4xl">{success ? "✅" : "❌"}</div>
+            <div className="text-4xl" aria-hidden="true">{success ? "✅" : "❌"}</div>
             <h2 className="text-lg font-semibold">
               {success ? "Email verified!" : "Verification failed"}
             </h2>
@@ -47,11 +48,11 @@ export default async function VerifyEmailPage({ searchParams }: Props) {
             )}
           </CardContent>
           <CardFooter>
-            <Link href="/sign-in" className="w-full">
-              <Button className={success ? "w-full" : "w-full"} variant={success ? "default" : "outline"}>
+            <Button asChild className="w-full" variant={success ? "default" : "outline"}>
+              <Link href="/sign-in">
                 {success ? "Sign In" : "Back to Sign In"}
-              </Button>
-            </Link>
+              </Link>
+            </Button>
           </CardFooter>
         </Card>
       </div>

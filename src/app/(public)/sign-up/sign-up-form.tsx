@@ -58,7 +58,7 @@ export function SignUpForm() {
     return (
       <Card>
         <CardContent className="pt-6 text-center space-y-4">
-          <div className="text-4xl">📧</div>
+          <div className="text-4xl" aria-hidden="true">📧</div>
           <h2 className="text-lg font-semibold">Check your email</h2>
           <p className="text-muted-foreground text-sm">
             We sent a verification link to <strong>{submittedEmail}</strong>.
@@ -69,9 +69,9 @@ export function SignUpForm() {
           </p>
         </CardContent>
         <CardFooter>
-          <Link href="/sign-in" className="w-full">
-            <Button variant="outline" className="w-full">Back to Sign In</Button>
-          </Link>
+          <Button asChild variant="outline" className="w-full">
+            <Link href="/sign-in">Back to Sign In</Link>
+          </Button>
         </CardFooter>
       </Card>
     );
