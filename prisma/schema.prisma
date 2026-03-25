@@ -1,0 +1,164 @@
+// Prisma schema for P-Ferm
+// Database: PostgreSQL
+
+generator client {
+  provider   = "prisma-client-js"
+  engineType = "library"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ========================================
+// BETTERAUTH TABLES
+// ========================================
+
+/// BetterAuth user table - authentication data only
+model AuthUser {
+  id            String    @id @db.VarChar(32)
+  email         String    @unique
+  emailVerified Boolean   @default(false)
+  name          String?
+  image         String?
+  createdAt     DateTime  @default(now()) @db.Timestamptz
+  updatedAt     DateTime  @updatedAt @db.Timestamptz
+
+  // Admin plugin fields
+  role         String    @default("user")
+  banned       Boolean   @default(false)
+  banReason    String?
+  banExpiresAt DateTime? @db.Timestamptz
+
+  // Relations
+  sessions AuthSession[]
+  accounts AuthAccount[]
+
+  @@map("auth_user")
+}
+
+/// BetterAuth session table
+model AuthSession {
+  id        String   @id @db.VarChar(32)
+  userId    String   @db.VarChar(32)
+  expiresAt DateTime @db.Timestamptz
+  token     String   @unique
+  ipAddress String?
+  userAgent String?
+  createdAt DateTime @default(now()) @db.Timestamptz
+  updatedAt DateTime @updatedAt @db.Timestamptz
+
+  user AuthUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([token])
+  @@map("auth_session")
+}
+
+/// BetterAuth account table - for OAuth providers and credential authentication
+model AuthAccount {
+  id           String    @id @db.VarChar(32)
+  userId       String    @db.VarChar(32)
+  accountId    String    @db.VarChar(32)
+  providerId   String
+  accessToken  String?
+  refreshToken String?
+  expiresAt    DateTime? @db.Timestamptz
+  password     String?
+  createdAt    DateTime  @default(now()) @db.Timestamptz
+  updatedAt    DateTime  @updatedAt @db.Timestamptz
+
+  user AuthUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, accountId])
+  @@index([userId])
+  @@map("auth_account")
+}
+
+/// BetterAuth verification table - for email verification and password reset tokens
+model AuthVerification {
+  id         String   @id @db.VarChar(32)
+  identifier String
+  value      String
+  expiresAt  DateTime @db.Timestamptz
+  createdAt  DateTime @default(now()) @db.Timestamptz
+  updatedAt  DateTime @updatedAt @db.Timestamptz
+
+  @@unique([identifier, value])
+  @@map("auth_verification")
+}
+
+// ========================================
+// ENUMS
+// ========================================
+
+enum UserType {
+  user
+  super_admin
+}
+
+// ========================================
+// APPLICATION TABLES
+// ========================================
+
+/// Application user profile — linked to BetterAuth's auth_user
+model User {
+  id         String   @id @db.VarChar(32)
+  authUserId String   @unique @db.VarChar(32)
+  userType   UserType @default(user)
+  firstName  String
+  lastName   String?
+  phone      String?
+  avatarId   String?  @db.VarChar(32)
+  createdAt  DateTime @default(now()) @db.Timestamptz
+  updatedAt  DateTime @updatedAt @db.Timestamptz
+
+  avatar            MediaFile? @relation("UserAvatar", fields: [avatarId], references: [id], onDelete: SetNull)
+  createdMediaFiles MediaFile[] @relation("CreatedMediaFiles")
+  updatedMediaFiles MediaFile[] @relation("UpdatedMediaFiles")
+  batches           Batch[]
+
+  @@map("user")
+}
+
+/// Batch — a saved prediction run scoped to an authenticated user
+model Batch {
+  id           String   @id @db.VarChar(32)
+  userId       String   @db.VarChar(32)
+  batchId      String   // user-provided batch identifier
+  parameters   Json     // PredictionRequest fields (excluding batch_id)
+  predictions  Json     // PredictionPredictions object
+  qualityScore Float    // denormalized from predictions.quality_score
+  qcStatus     String   // denormalized from prediction response
+  qcFlags      Json     // array of QC flag strings
+  createdAt    DateTime @default(now()) @db.Timestamptz
+  updatedAt    DateTime @updatedAt @db.Timestamptz
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, batchId])
+  @@index([userId])
+  @@map("batch")
+}
+
+/// Uploaded file metadata — images and documents
+model MediaFile {
+  id               String   @id @db.VarChar(32)
+  relativePath     String
+  mimeType         String
+  sizeBytes        Int
+  width            Int?
+  height           Int?
+  originalFilename String?
+  createdBy        String   @db.VarChar(32)
+  updatedBy        String   @db.VarChar(32)
+  createdAt        DateTime @default(now()) @db.Timestamptz
+  updatedAt        DateTime @updatedAt @db.Timestamptz
+
+  creator     User   @relation("CreatedMediaFiles", fields: [createdBy], references: [id], onDelete: Cascade)
+  updater     User   @relation("UpdatedMediaFiles", fields: [updatedBy], references: [id], onDelete: Cascade)
+  avatarUsers User[] @relation("UserAvatar")
+
+  @@index([createdBy])
+  @@map("media_file")
+}
