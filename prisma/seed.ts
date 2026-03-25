@@ -46,11 +46,18 @@ async function main() {
   console.log(`👤 Creating super admin: ${SEED_ADMIN_EMAIL}...`);
   await signup(SEED_ADMIN_EMAIL!, SEED_ADMIN_PASSWORD!, SEED_ADMIN_FIRST_NAME!);
 
-  // Mark email as verified — bypass email flow in seed environment
+  // Promote to super_admin and mark email as verified
   const { prisma } = await import("../src/lib/prisma");
-  await prisma.authUser.update({
+  const authUser = await prisma.authUser.findUniqueOrThrow({
     where: { email: SEED_ADMIN_EMAIL! },
+  });
+  await prisma.authUser.update({
+    where: { id: authUser.id },
     data: { emailVerified: true },
+  });
+  await prisma.user.update({
+    where: { authUserId: authUser.id },
+    data: { userType: "super_admin" },
   });
 
   console.log(`✅ Super admin created: ${SEED_ADMIN_EMAIL}\n`);

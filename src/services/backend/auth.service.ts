@@ -67,7 +67,8 @@ function getTokenFromRequest(request: Request): string | null {
 }
 
 /**
- * Sign up a new user. First user becomes super_admin; all others become user.
+ * Sign up a new user. Always creates a regular 'user' role.
+ * Super admin is created exclusively via the seed script.
  * Email verification is required before sign-in.
  */
 export async function signup(
@@ -76,9 +77,6 @@ export async function signup(
   firstName: string,
   lastName?: string
 ): Promise<{ message: string }> {
-  const count = await prisma.user.count();
-  const isFirstUser = count === 0;
-  const userType = isFirstUser ? "super_admin" : "user";
 
   const fullName = lastName ? `${firstName} ${lastName}` : firstName;
 
@@ -110,7 +108,7 @@ export async function signup(
     data: {
       id: generateUserId(),
       authUserId: authResult.user.id,
-      userType,
+      userType: "user",
       firstName,
       lastName,
     },
