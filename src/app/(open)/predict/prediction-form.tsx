@@ -6,6 +6,8 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { PredictionRequestSchema } from "@pferm/shared-schemas";
 import type { PredictionRequest, PredictionResponse } from "@pferm/shared-schemas";
 import { predict } from "@/services/frontend/prediction";
+import { saveBatch } from "@/services/frontend/batch";
+import { useSession } from "@/hooks/use-session";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -53,6 +55,7 @@ function getDefaults(): PredictionRequest {
 }
 
 export function PredictionForm() {
+  const { user } = useSession();
   const [result, setResult] = useState<PredictionResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -70,6 +73,17 @@ export function PredictionForm() {
     try {
       const response = await predict(data);
       setResult(response);
+
+      if (user) {
+        const { batch_id, ...parameters } = data;
+        saveBatch({
+          batchId: batch_id,
+          parameters,
+          predictions: response.predictions,
+          qcStatus: response.qc_status,
+          qcFlags: response.qc_flags,
+        }).catch(() => {});
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Prediction failed");
       setResult(null);
