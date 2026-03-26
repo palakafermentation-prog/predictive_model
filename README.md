@@ -22,7 +22,7 @@ p-ferm-code/
 │   │   └── (secure)/           # Authenticated pages (redirects to /sign-in if no session)
 │   ├── components/             # Shared React components
 │   ├── services/
-│   │   ├── backend/            # Server-side business logic (auth, profile, media, predictions)
+│   │   ├── backend/            # Server-side business logic (auth, profile, media, predictions, batches)
 │   │   └── frontend/           # Client-side API wrappers
 │   └── lib/                    # Infrastructure: auth config, Prisma client, email, env
 ├── prisma/                     # Schema and migrations

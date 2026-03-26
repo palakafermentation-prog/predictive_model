@@ -33,7 +33,7 @@ flowchart TD
             Open["(open) — unauthenticated app"]
             Secure["(secure) — authenticated app"]
         end
-        API[API Routes\n/api/auth/*\n/api/profile\n/api/media/*\n/api/predictions\n/api/health]
+        API[API Routes\n/api/auth/*\n/api/profile\n/api/media/*\n/api/predictions\n/api/batches/*\n/api/health]
         BE[services/backend]
         Lib[lib/\nauth · prisma · email · env]
     end
@@ -139,6 +139,16 @@ erDiagram
         string lastName
         string avatarId FK
     }
+    Batch {
+        string id PK
+        string userId FK
+        string batchId
+        json parameters
+        json predictions
+        float qualityScore
+        string qcStatus
+        json qcFlags
+    }
     MediaFile {
         string id PK
         string relativePath
@@ -150,6 +160,7 @@ erDiagram
     AuthUser ||--o{ AuthSession : "has"
     AuthUser ||--o{ AuthAccount : "has"
     AuthUser ||--|| User : "linked to"
+    User ||--o{ Batch : "owns"
     User ||--o{ MediaFile : "creates"
     User }o--o| MediaFile : "avatar"
 ```
@@ -164,11 +175,13 @@ All business logic lives in `src/services/`. API routes call services; services 
 | `profile.service.ts` | `services/backend/` | Get and update user profile |
 | `media.service.ts` | `services/backend/` | Upload, retrieve, delete media files |
 | `prediction.service.ts` | `services/backend/` | Call AI service (or mock) for fermentation predictions |
+| `batch.service.ts` | `services/backend/` | Batch CRUD, upsert, and CSV upload processing |
 | `db.service.ts` | `services/backend/` | Shared DB query helpers |
 | `permissions.ts` | `services/backend/` | `requireSuperAdmin()` and `requireOwner()` guards |
 | `auth.ts` | `services/frontend/` | Client-side auth API calls |
 | `media.ts` | `services/frontend/` | Client-side media upload/fetch |
 | `prediction.ts` | `services/frontend/` | Client-side prediction calls |
+| `batch.ts` | `services/frontend/` | Client-side batch list, fetch, delete, and CSV upload |
 
 ## Monorepo Packages
 
@@ -183,7 +196,7 @@ All business logic lives in `src/services/`. API routes call services; services 
 | Group | Auth | Purpose |
 |---|---|---|
 | `(public)` | None | Auth pages: sign-in, sign-up, verify-email, forgot/reset password |
-| `(open)` | None | Public app pages — currently `/predict` |
+| `(open)` | None | Public app pages — `/predict` and `/batches` |
 | `(secure)` | Required | Authenticated app — redirects to `/sign-in` via `SecureLayout` |
 
 ## AI Service

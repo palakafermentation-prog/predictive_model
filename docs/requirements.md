@@ -56,6 +56,7 @@
 | `/forgot-password` | Request password reset email |
 | `/reset-password` | Set new password using token from email |
 | `/predict` | Fermentation quality prediction tool (accessible without account) |
+| `/batches` | Batch history for authenticated users; unauthenticated users see an auth-gate dialog |
 
 ### Secure (auth required — redirects to `/sign-in` if no session)
 
@@ -70,6 +71,38 @@
 - Falls back to mock predictions when AI service is unavailable
 - Predictions carry error bands — they are estimates, not guarantees
 - Publicly accessible (no sign-in required)
+- When a signed-in user runs a prediction, the result is silently auto-saved as a batch (no error shown if save fails)
+
+## Batches (/batches)
+
+- Accessible without sign-in, but unauthenticated users see a non-dismissable dialog explaining the feature and prompting sign-in
+- Authenticated users see their full batch history in a table
+
+**Batch persistence:**
+- A batch is a saved prediction run — when a signed-in user submits a prediction on `/predict`, it is automatically saved or updated
+- Keyed by `(userId, batchId)` — submitting with an existing batch ID overwrites the stored parameters and results
+- Each batch stores: input parameters, prediction results, quality score, QC status, QC flags
+
+**Batch list table:**
+- Columns: Batch ID, Quality Score, QC Status, Updated date
+- Ordered by most recently updated
+- Clicking a row opens the batch detail drawer
+
+**Batch detail drawer:**
+- Right-side Sheet showing input parameters (read-only) and prediction results
+- Reuses the `PredictionResults` component
+
+**CSV upload:**
+- Upload area on the Batches page accepts a CSV file
+- CSV contains rows of parameters, each with an individual `batch_id`
+- Each row is processed consecutively against the AI service (mocked for now)
+- Results appear in the batch list after processing
+- Maximum 100 rows per upload; validation errors shown inline before submission
+
+**Ownership and security:**
+- All batch data is scoped to the authenticated user
+- Ownership is checked on every read/write API operation
+- Requests from non-owners return 404 (no existence leaking)
 
 ## User Profile
 
