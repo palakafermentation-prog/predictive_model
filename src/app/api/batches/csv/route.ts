@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/services/backend/auth.service";
-import { saveBatch } from "@/services/backend/batch.service";
-import { predict } from "@/services/backend/prediction.service";
+import { processCsvUpload } from "@/services/backend/batch.service";
 import { handleApiError } from "@/lib/api-error";
 import { CsvUploadRequestSchema } from "@pferm/shared-schemas";
 
@@ -19,22 +18,9 @@ export async function POST(request: Request) {
 
     const body = await request.json();
     const { rows } = CsvUploadRequestSchema.parse(body);
+    const batches = await processCsvUpload(session.user, rows);
 
-    const saved = [];
-    for (const row of rows) {
-      const { batch_id, ...parameters } = row;
-      const response = await predict(row);
-      const batch = await saveBatch(session.user, {
-        batchId: batch_id,
-        parameters,
-        predictions: response.predictions,
-        qcStatus: response.qc_status,
-        qcFlags: response.qc_flags,
-      });
-      saved.push(batch);
-    }
-
-    return NextResponse.json({ data: { batches: saved }, requestId }, { status: 201 });
+    return NextResponse.json({ data: { batches }, requestId }, { status: 201 });
   } catch (error) {
     return handleApiError(error, { route: "POST /api/batches/csv", userId: session?.user?.id, requestId });
   }

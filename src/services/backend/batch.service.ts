@@ -1,8 +1,9 @@
 import { prisma } from "@/lib/prisma";
 import { NotFoundError } from "@/lib/errors";
 import { generateBatchId } from "./db.service";
+import { predict } from "./prediction.service";
 import type { UserSession } from "./permissions";
-import type { BatchSaveRequest } from "@pferm/shared-schemas";
+import type { BatchSaveRequest, PredictionRequest } from "@pferm/shared-schemas";
 
 const batchListSelect = {
   id: true,
@@ -81,6 +82,26 @@ export async function saveBatch(user: UserSession, data: BatchSaveRequest) {
     },
     select: batchListSelect,
   });
+}
+
+/**
+ * Process CSV upload: run each row through predict, then save as a batch.
+ */
+export async function processCsvUpload(user: UserSession, rows: PredictionRequest[]) {
+  const saved = [];
+  for (const row of rows) {
+    const { batch_id, ...parameters } = row;
+    const response = await predict(row);
+    const batch = await saveBatch(user, {
+      batchId: batch_id,
+      parameters,
+      predictions: response.predictions,
+      qcStatus: response.qc_status,
+      qcFlags: response.qc_flags,
+    });
+    saved.push(batch);
+  }
+  return saved;
 }
 
 /**
