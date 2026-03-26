@@ -12,7 +12,7 @@ export const BatchParametersSchema = PredictionRequestSchema.omit({
 });
 
 export const BatchSaveRequestSchema = z.object({
-  batchId: z.string().min(1, "Batch ID is required"),
+  batchId: z.string().min(1, "Batch ID is required").max(100, "Batch ID too long"),
   parameters: BatchParametersSchema,
   predictions: PredictionPredictionsSchema,
   qcStatus: z.string(),
