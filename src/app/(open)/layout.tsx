@@ -1,6 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
-import { ThemeToggle } from "@/components/theme/theme-toggle";
+import { OpenNav } from "@/components/layout/open-nav";
 
 export default function OpenLayout({
   children,
@@ -15,27 +15,7 @@ export default function OpenLayout({
             <Image src="/logo.png" alt="Palaka Fermentation" width={52} height={52} className="dark:brightness-0 dark:invert" />
             <span className="text-2xl font-semibold tracking-tight">Palaka Fermentation</span>
           </Link>
-          <nav className="flex items-center gap-4 text-sm">
-            <Link
-              href="/predict"
-              className="text-muted-foreground hover:text-foreground transition-colors"
-            >
-              Predict
-            </Link>
-            <Link
-              href="/batches"
-              className="text-muted-foreground hover:text-foreground transition-colors"
-            >
-              Batches
-            </Link>
-            <Link
-              href="/sign-in"
-              className="text-muted-foreground hover:text-foreground transition-colors"
-            >
-              Sign In
-            </Link>
-            <ThemeToggle />
-          </nav>
+          <OpenNav />
         </div>
       </header>
 
