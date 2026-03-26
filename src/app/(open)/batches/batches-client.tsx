@@ -137,7 +137,7 @@ export function BatchesClient() {
         </div>
 
         {fetchError && (
-          <div className="rounded-md bg-destructive/10 border border-destructive p-3 text-sm text-destructive">
+          <div role="alert" className="rounded-md bg-destructive/10 border border-destructive p-3 text-sm text-destructive">
             {fetchError}
           </div>
         )}
@@ -160,7 +160,16 @@ export function BatchesClient() {
                 <TableRow
                   key={batch.id}
                   className="cursor-pointer"
+                  tabIndex={0}
+                  role="button"
+                  aria-label={`View batch ${batch.batchId}`}
                   onClick={() => openDrawer("batch_detail", { id: batch.id })}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      openDrawer("batch_detail", { id: batch.id });
+                    }
+                  }}
                 >
                   <TableCell className="font-mono text-sm">{batch.batchId}</TableCell>
                   <TableCell className="font-mono">{batch.qualityScore.toFixed(1)}</TableCell>
@@ -212,7 +221,7 @@ export function BatchesClient() {
           </div>
 
           {csvErrors.length > 0 && (
-            <ul className="space-y-1">
+            <ul role="alert" className="space-y-1">
               {csvErrors.map((err, i) => (
                 <li key={i} className="text-sm text-destructive">
                   {err}

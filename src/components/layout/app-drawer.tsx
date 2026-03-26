@@ -32,9 +32,9 @@ function DrawerContentSkeleton() {
   return (
     <div className="space-y-4">
       <div className="space-y-2">
-        <div className="h-10 bg-muted rounded animate-pulse" />
-        <div className="h-10 bg-muted rounded animate-pulse" />
-        <div className="h-10 bg-muted rounded animate-pulse" />
+        <div className="h-10 bg-muted rounded animate-pulse motion-reduce:animate-none" />
+        <div className="h-10 bg-muted rounded animate-pulse motion-reduce:animate-none" />
+        <div className="h-10 bg-muted rounded animate-pulse motion-reduce:animate-none" />
       </div>
     </div>
   );

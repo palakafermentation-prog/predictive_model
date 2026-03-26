@@ -95,7 +95,14 @@ export function PredictionResults({ response }: PredictionResultsProps) {
                         {percent}%
                       </dd>
                     </div>
-                    <div className="h-2 rounded-sm bg-muted overflow-hidden">
+                    <div
+                      role="progressbar"
+                      aria-valuenow={Number(percent)}
+                      aria-valuemin={0}
+                      aria-valuemax={100}
+                      aria-label={`${label} probability: ${percent}%`}
+                      className="h-2 rounded-sm bg-muted overflow-hidden"
+                    >
                       <div
                         className={`h-full rounded-sm transition-all ${isHighRisk ? "bg-destructive" : "bg-primary"}`}
                         style={{ width: `${percent}%` }}

@@ -32,7 +32,7 @@ export default function BatchDetailDrawerContent({ id }: BatchDetailDrawerConten
 
   if (error) {
     return (
-      <div className="rounded-md bg-destructive/10 border border-destructive p-3 text-sm text-destructive">
+      <div role="alert" className="rounded-md bg-destructive/10 border border-destructive p-3 text-sm text-destructive">
         {error}
       </div>
     );
@@ -41,9 +41,9 @@ export default function BatchDetailDrawerContent({ id }: BatchDetailDrawerConten
   if (!batch) {
     return (
       <div className="space-y-4">
-        <div className="h-6 w-32 bg-muted rounded animate-pulse" />
-        <div className="h-40 bg-muted rounded animate-pulse" />
-        <div className="h-40 bg-muted rounded animate-pulse" />
+        <div className="h-6 w-32 bg-muted rounded animate-pulse motion-reduce:animate-none" />
+        <div className="h-40 bg-muted rounded animate-pulse motion-reduce:animate-none" />
+        <div className="h-40 bg-muted rounded animate-pulse motion-reduce:animate-none" />
       </div>
     );
   }
