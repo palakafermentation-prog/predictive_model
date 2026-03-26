@@ -100,10 +100,12 @@ export function PredictionForm() {
             id="batch_id"
             placeholder="e.g. MY_BATCH_001"
             className="max-w-xs"
+            aria-invalid={!!errors.batch_id}
+            aria-describedby={errors.batch_id ? "batch_id-error" : undefined}
             {...register("batch_id")}
           />
           {errors.batch_id && (
-            <p className="text-sm text-destructive">{errors.batch_id.message}</p>
+            <p id="batch_id-error" className="text-sm text-destructive">{errors.batch_id.message}</p>
           )}
         </div>
 
@@ -129,10 +131,12 @@ export function PredictionForm() {
                     type="number"
                     step={field.step}
                     className="mt-1"
+                    aria-invalid={!!errors[field.name]}
+                    aria-describedby={errors[field.name] ? `${field.name}-error` : undefined}
                     {...register(field.name, { valueAsNumber: true })}
                   />
                   {errors[field.name] && (
-                    <p className="mt-0.5 text-xs text-destructive">
+                    <p id={`${field.name}-error`} className="mt-0.5 text-xs text-destructive">
                       {errors[field.name]?.message}
                     </p>
                   )}
