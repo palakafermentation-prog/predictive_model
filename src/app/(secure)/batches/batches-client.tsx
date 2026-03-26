@@ -4,7 +4,7 @@ import * as React from "react";
 import { useSession } from "@/hooks/use-session";
 import { useDrawerStore } from "@/stores/drawer-store";
 import { getBatches, uploadCsv } from "@/services/frontend/batch";
-import { AuthGateDialog } from "@/components/ui/auth-gate-dialog";
+import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import {
   Table,
@@ -15,6 +15,9 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { formatDate } from "@pferm/shared-lib";
+import { Eye, Download } from "lucide-react";
+import { PredictionRequestSchema } from "@pferm/shared-schemas";
+import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 import { CsvUploadRequestSchema } from "@pferm/shared-schemas";
 import type { BatchListItem, PredictionRequest } from "@pferm/shared-schemas";
 
@@ -56,12 +59,22 @@ function parseCsv(text: string): PredictionRequest[] {
   });
 }
 
+function downloadTemplateCsv() {
+  const headers = Object.keys(PredictionRequestSchema.shape).join(",");
+  const blob = new Blob([headers + "\n"], { type: "text/csv" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "batch_template.csv";
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
 // --- Batches Client ---
 
 export function BatchesClient() {
   const { user, isLoading } = useSession();
   const { openDrawer } = useDrawerStore();
-
   const [batches, setBatches] = React.useState<BatchListItem[]>([]);
   const [fetchError, setFetchError] = React.useState<string | null>(null);
 
@@ -98,6 +111,8 @@ export function BatchesClient() {
       if (!result.success) {
         const msgs = result.error.issues.map((i) => i.message);
         setCsvErrors(msgs);
+        setCsvFile(null);
+        if (fileInputRef.current) fileInputRef.current.value = "";
         return;
       }
 
@@ -119,6 +134,8 @@ export function BatchesClient() {
       if (fileInputRef.current) fileInputRef.current.value = "";
     } catch (err) {
       setCsvErrors([err instanceof Error ? err.message : "Upload failed"]);
+      setCsvFile(null);
+      if (fileInputRef.current) fileInputRef.current.value = "";
     } finally {
       setIsUploading(false);
     }
@@ -126,14 +143,84 @@ export function BatchesClient() {
 
   return (
     <>
-      <AuthGateDialog open={!isLoading && !user} />
-
-      <div className="space-y-8">
+      <div className="space-y-6">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Batches</h1>
+          <PageHeader title="Batches" />
+
           <p className="mt-1 text-sm text-muted-foreground">
             Your saved prediction runs. Click a row to view parameters and results.
           </p>
+        </div>
+
+        {/* CSV upload */}
+        <div className="space-y-3 rounded-lg border p-4">
+          <div className="flex flex-col md:flex-row md:items-center gap-4">
+            <h2 className="text-sm font-medium md:flex-1">Upload CSV <span className="text-xs font-normal text-muted-foreground">(max 100 rows)</span></h2>
+
+            <div className="md:flex-1">
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={downloadTemplateCsv}
+              >
+                <Download className="h-3.5 w-3.5 mr-1.5" aria-hidden="true" />
+                Template
+              </Button>
+            </div>
+          </div>
+
+          <div className="flex flex-col md:flex-row md:items-start gap-4 md:gap-8">
+            <p className="text-xs text-muted-foreground md:flex-1">
+              CSV with columns: <span className="font-mono">batch_id</span> and parameter fields. Matching batch IDs will update existing records.
+            </p>
+
+            <div className="space-y-3 md:flex-1">
+              <div className="flex flex-wrap items-center gap-3">
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".csv,text/csv"
+                  className="hidden"
+                  aria-label="Select CSV file"
+                  onChange={handleFileChange}
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  {csvFile ? csvFile.name : "Choose file"}
+                </Button>
+                {csvFile && (
+                  <Button
+                    type="button"
+                    size="sm"
+                    onClick={handleCsvUpload}
+                    disabled={isUploading}
+                  >
+                    {isUploading ? "Processing…" : "Upload & Run"}
+                  </Button>
+                )}
+              </div>
+
+              {csvErrors.length > 0 && (
+                <div role="alert" className="space-y-1">
+                  <ul className="space-y-1">
+                    {csvErrors.map((err, i) => (
+                      <li key={i} className="text-sm text-destructive">
+                        {err}
+                      </li>
+                    ))}
+                  </ul>
+                  <p className="text-xs text-muted-foreground">
+                    Fix the file and choose it again to retry.
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
 
         {fetchError && (
@@ -153,6 +240,7 @@ export function BatchesClient() {
                 <TableHead>Quality Score</TableHead>
                 <TableHead>QC Status</TableHead>
                 <TableHead>Updated</TableHead>
+                <TableHead className="w-10" />
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -177,59 +265,21 @@ export function BatchesClient() {
                   <TableCell className="text-sm text-muted-foreground">
                     {formatDate(batch.updatedAt)}
                   </TableCell>
+                  <TableCell>
+                    <TooltipProvider delayDuration={300}>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <span><Eye className="h-4 w-4 text-muted-foreground" aria-hidden="true" /></span>
+                        </TooltipTrigger>
+                        <TooltipContent>View Results</TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>
           </Table>
         )}
-
-        {/* CSV upload */}
-        <div className="space-y-3 rounded-lg border p-4">
-          <h2 className="text-sm font-medium">Upload CSV</h2>
-          <p className="text-xs text-muted-foreground">
-            CSV must include columns: <span className="font-mono">batch_id, Rice_Polish_Ratio, Water_Hardness_ppm, Water_pH, Koji_Incubation_Temp_C, Koji_Incubation_Hours, Yeast_Pitch_Rate_cells_mL, Moromi_Duration_Days, Initial_Temperature_C</span>.
-            Maximum 100 rows.
-          </p>
-
-          <div className="flex items-center gap-3">
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept=".csv,text/csv"
-              className="hidden"
-              aria-label="Select CSV file"
-              onChange={handleFileChange}
-            />
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => fileInputRef.current?.click()}
-            >
-              {csvFile ? csvFile.name : "Choose file"}
-            </Button>
-            {csvFile && (
-              <Button
-                type="button"
-                size="sm"
-                onClick={handleCsvUpload}
-                disabled={isUploading}
-              >
-                {isUploading ? "Processing…" : "Upload & Run"}
-              </Button>
-            )}
-          </div>
-
-          {csvErrors.length > 0 && (
-            <ul role="alert" className="space-y-1">
-              {csvErrors.map((err, i) => (
-                <li key={i} className="text-sm text-destructive">
-                  {err}
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
       </div>
     </>
   );

@@ -10,6 +10,7 @@ import { SigninFormSchema, type SigninForm } from "@pferm/shared-schemas";
 import { signin, resendVerification, AuthError } from "@/services/frontend/auth";
 import { useUserStore } from "@/stores/user-store";
 import { Button } from "@/components/ui/button";
+import { KeyRound, UserPlus, ArrowLeft } from "lucide-react";
 import { Form, FormField, FormItem, FormMessage } from "@/components/ui/form";
 import { FloatingLabelInput } from "@/components/floating-label-input";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
@@ -33,7 +34,7 @@ export function SignInForm() {
     try {
       const result = await signin(data.email, data.password);
       setUser(result.user);
-      router.push("/dashboard");
+      router.push("/batches");
     } catch (error) {
       if (error instanceof AuthError && error.code === "EMAIL_NOT_VERIFIED") {
         setUnverifiedEmail(data.email);
@@ -90,22 +91,33 @@ export function SignInForm() {
               </div>
             )}
           </CardContent>
-          <CardFooter className="flex flex-col gap-3">
+          <CardFooter className="flex flex-col items-center gap-3">
             <Button type="submit" className="w-full" disabled={form.formState.isSubmitting}>
               {form.formState.isSubmitting ? "Signing in..." : "Sign In"}
             </Button>
-            <Link
-              href="/forgot-password"
-              className="text-sm text-muted-foreground hover:text-foreground text-center"
-            >
-              Forgot your password?
-            </Link>
-            <Link
-              href="/sign-up"
-              className="text-sm text-muted-foreground hover:text-foreground text-center"
-            >
-              Don&apos;t have an account? Create one
-            </Link>
+            <div className="flex flex-col items-start gap-3">
+              <Link
+                href="/forgot-password"
+                className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
+              >
+                <KeyRound className="h-3.5 w-3.5" aria-hidden="true" />
+                Forgot your password?
+              </Link>
+              <Link
+                href="/sign-up"
+                className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
+              >
+                <UserPlus className="h-3.5 w-3.5" aria-hidden="true" />
+                Don&apos;t have an account? Create one
+              </Link>
+              <Link
+                href="/predict"
+                className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
+              >
+                <ArrowLeft className="h-3.5 w-3.5" aria-hidden="true" />
+                Back to predictions
+              </Link>
+            </div>
           </CardFooter>
         </form>
       </Form>

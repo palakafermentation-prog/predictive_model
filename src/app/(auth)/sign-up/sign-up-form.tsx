@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { SignupFormSchema, type SignupForm } from "@pferm/shared-schemas";
 import { signup, AuthError } from "@/services/frontend/auth";
 import { Button } from "@/components/ui/button";
+import { LogIn } from "lucide-react";
 import { Form, FormField, FormItem, FormMessage } from "@/components/ui/form";
 import { FloatingLabelInput } from "@/components/floating-label-input";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
@@ -118,8 +119,9 @@ export function SignUpForm() {
             </Button>
             <Link
               href="/sign-in"
-              className="text-sm text-muted-foreground hover:text-foreground text-center"
+              className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
             >
+              <LogIn className="h-3.5 w-3.5" aria-hidden="true" />
               Already have an account? Sign in
             </Link>
           </CardFooter>

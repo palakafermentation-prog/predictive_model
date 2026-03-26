@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useAuthGateStore } from "@/stores/auth-gate-store";
 import {
   Dialog,
   DialogContent,
@@ -11,35 +12,25 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 
-interface AuthGateDialogProps {
-  open: boolean;
-  title?: string;
-  description?: string;
-}
+export function AuthGateDialog() {
+  const { isOpen, closeAuthGate } = useAuthGateStore();
 
-export function AuthGateDialog({
-  open,
-  title = "Sign in to access Batches",
-  description = "Batches is where you can store and review your prediction runs, and upload multiple sets of parameters at once. Sign in to access this feature.",
-}: AuthGateDialogProps) {
   return (
-    <Dialog
-      open={open}
-      onOpenChange={() => {
-        // Non-dismissable — ignore all close attempts
-      }}
-    >
-      <DialogContent
-        hideCloseButton
-        onPointerDownOutside={(e) => e.preventDefault()}
-        onEscapeKeyDown={(e) => e.preventDefault()}
-      >
+    <Dialog open={isOpen} onOpenChange={(open) => { if (!open) closeAuthGate(); }}>
+      <DialogContent>
         <DialogHeader>
-          <DialogTitle>{title}</DialogTitle>
-          <DialogDescription>{description}</DialogDescription>
+          <DialogTitle>Sign in to access Batches</DialogTitle>
+          <DialogDescription>
+            Batches is where you can store and review your prediction runs, and
+            upload multiple sets of parameters at once. Sign in to access this
+            feature.
+          </DialogDescription>
         </DialogHeader>
-        <DialogFooter>
-          <Button asChild>
+        <DialogFooter className="gap-2">
+          <Button variant="outline" onClick={closeAuthGate}>
+            Cancel
+          </Button>
+          <Button asChild onClick={closeAuthGate}>
             <Link href="/sign-in">Sign in</Link>
           </Button>
         </DialogFooter>
