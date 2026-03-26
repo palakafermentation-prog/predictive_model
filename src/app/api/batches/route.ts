@@ -16,8 +16,12 @@ export async function GET(request: Request) {
       );
     }
 
-    const batches = await getBatches(session.user);
-    return NextResponse.json({ data: { batches }, requestId });
+    const { searchParams } = new URL(request.url);
+    const page = parseInt(searchParams.get("page") ?? "1", 10);
+    const perPage = parseInt(searchParams.get("perPage") ?? "50", 10);
+
+    const result = await getBatches(session.user, { page, perPage });
+    return NextResponse.json({ data: result, requestId });
   } catch (error) {
     return handleApiError(error, { route: "GET /api/batches", userId: session?.user?.id, requestId });
   }

@@ -73,7 +73,7 @@ export function BatchesClient() {
   React.useEffect(() => {
     if (!user) return;
     getBatches()
-      .then(setBatches)
+      .then((result) => setBatches(result.items))
       .catch((err) => setFetchError(err instanceof Error ? err.message : "Failed to load batches"));
   }, [user]);
 

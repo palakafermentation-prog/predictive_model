@@ -26,14 +26,27 @@ const batchDetailSelect = {
 } as const;
 
 /**
- * List all batches for the authenticated user, newest first.
+ * List batches for the authenticated user, newest first (paginated).
  */
-export async function getBatches(user: UserSession) {
-  return prisma.batch.findMany({
-    where: { userId: user.id },
-    select: batchListSelect,
-    orderBy: { updatedAt: "desc" },
-  });
+export async function getBatches(
+  user: UserSession,
+  pagination: { page: number; perPage: number } = { page: 1, perPage: 50 }
+) {
+  const where = { userId: user.id };
+  const skip = (pagination.page - 1) * pagination.perPage;
+
+  const [items, total] = await Promise.all([
+    prisma.batch.findMany({
+      where,
+      select: batchListSelect,
+      orderBy: { updatedAt: "desc" },
+      skip,
+      take: pagination.perPage,
+    }),
+    prisma.batch.count({ where }),
+  ]);
+
+  return { items, total, page: pagination.page, perPage: pagination.perPage };
 }
 
 /**

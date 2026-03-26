@@ -9,10 +9,18 @@ import type {
 
 const baseUrl = NEXT_PUBLIC_API_BASE_URL;
 
-export async function getBatches(): Promise<BatchListItem[]> {
-  const response = await apiFetch<{ batches: BatchListItem[] }>(`${baseUrl}/batches`);
+export async function getBatches(
+  pagination?: { page?: number; perPage?: number }
+): Promise<{ items: BatchListItem[]; total: number; page: number; perPage: number }> {
+  const params = new URLSearchParams();
+  if (pagination?.page) params.set("page", String(pagination.page));
+  if (pagination?.perPage) params.set("perPage", String(pagination.perPage));
+  const qs = params.toString();
+  const url = qs ? `${baseUrl}/batches?${qs}` : `${baseUrl}/batches`;
+
+  const response = await apiFetch<{ items: BatchListItem[]; total: number; page: number; perPage: number }>(url);
   if (isApiError(response)) throw new Error(response.error.message);
-  return response.data.batches;
+  return response.data;
 }
 
 export async function getBatch(id: string): Promise<BatchDetail> {
