@@ -79,7 +79,7 @@ export async function saveBatch(user: UserSession, data: BatchSaveRequest) {
     update: {
       parameters: data.parameters,
       predictions: data.predictions,
-      qualityScore: data.predictions.quality_score,
+      qualityScore: data.predictions.predicted_quality_score,
       qcStatus: data.qcStatus,
       qcFlags: data.qcFlags,
     },
@@ -89,7 +89,7 @@ export async function saveBatch(user: UserSession, data: BatchSaveRequest) {
       batchId: data.batchId,
       parameters: data.parameters,
       predictions: data.predictions,
-      qualityScore: data.predictions.quality_score,
+      qualityScore: data.predictions.predicted_quality_score,
       qcStatus: data.qcStatus,
       qcFlags: data.qcFlags,
     },
@@ -97,24 +97,48 @@ export async function saveBatch(user: UserSession, data: BatchSaveRequest) {
   });
 }
 
+export interface CsvRowError {
+  row: number;
+  batchId: string;
+  message: string;
+}
+
+export interface CsvUploadResult {
+  saved: Awaited<ReturnType<typeof saveBatch>>[];
+  errors: CsvRowError[];
+}
+
 /**
  * Process CSV upload: run each row through predict, then save as a batch.
+ * Continues on per-row failures and reports partial results.
  */
-export async function processCsvUpload(user: UserSession, rows: PredictionRequest[]) {
-  const saved = [];
-  for (const row of rows) {
-    const { batch_id, ...parameters } = row;
-    const response = await predict(row);
-    const batch = await saveBatch(user, {
-      batchId: batch_id,
-      parameters,
-      predictions: response.predictions,
-      qcStatus: response.qc_status,
-      qcFlags: response.qc_flags,
-    });
-    saved.push(batch);
+export async function processCsvUpload(user: UserSession, rows: PredictionRequest[]): Promise<CsvUploadResult> {
+  const saved: CsvUploadResult["saved"] = [];
+  const errors: CsvRowError[] = [];
+
+  for (let i = 0; i < rows.length; i++) {
+    const row = rows[i];
+    try {
+      const { batch_id, ...parameters } = row;
+      const response = await predict(row);
+      const batch = await saveBatch(user, {
+        batchId: batch_id,
+        parameters,
+        predictions: response.predictions,
+        qcStatus: response.qc_status,
+        qcFlags: response.qc_flags,
+      });
+      saved.push(batch);
+    } catch (error) {
+      errors.push({
+        row: i + 1,
+        batchId: row.batch_id,
+        message: error instanceof Error ? error.message : "Unknown error",
+      });
+    }
   }
-  return saved;
+
+  return { saved, errors };
 }
 
 /**
