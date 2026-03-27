@@ -4,29 +4,27 @@ import { z } from "zod/v4";
 
 export const PredictionRequestSchema = z.object({
   batch_id: z.string().min(1, "Batch ID is required").max(100, "Batch ID too long"),
-  Rice_Polish_Ratio: z.number({ message: "Polish Ratio is required" }).min(1, "Min 1%").max(100, "Max 100%"),
-  Water_Hardness_ppm: z.number({ message: "Hardness is required" }).min(0, "Min 0 ppm").max(500, "Max 500 ppm"),
-  Water_pH: z.number({ message: "pH is required" }).min(3, "Min 3").max(10, "Max 10"),
-  Koji_Incubation_Temp_C: z.number({ message: "Incubation Temp is required" }).min(15, "Min 15°C").max(50, "Max 50°C"),
-  Koji_Incubation_Hours: z.number({ message: "Incubation Hours is required" }).min(10, "Min 10 hrs").max(55, "Max 55 hrs"),
-  Yeast_Pitch_Rate_cells_mL: z.number({ message: "Pitch Rate is required" }).min(1_000_000, "Min 1,000,000").max(1_000_000_000, "Max 1,000,000,000"),
-  Moromi_Duration_Days: z.number({ message: "Duration is required" }).min(10, "Min 10 days").max(60, "Max 60 days"),
-  Initial_Temperature_C: z.number({ message: "Initial Temp is required" }).min(0, "Min 0°C").max(30, "Max 30°C"),
+  rice_polish_ratio: z.number({ message: "Polish Ratio is required" }).min(30, "Min 30%").max(90, "Max 90%"),
+  koji_incubation_hours: z.number({ message: "Incubation Hours is required" }).min(12, "Min 12 hrs").max(60, "Max 60 hrs"),
+  moromi_duration_days: z.number({ message: "Duration is required" }).min(15, "Min 15 days").max(45, "Max 45 days"),
+  initial_temperature_c: z.number({ message: "Initial Temp is required" }).min(5, "Min 5°C").max(20, "Max 20°C"),
+  water_ph: z.number({ message: "pH is required" }).min(3.0, "Min 3.0").max(8.0, "Max 8.0"),
+  water_hardness_ppm: z.number({ message: "Hardness is required" }).min(5, "Min 5 ppm").max(100, "Max 100 ppm"),
+  yeast_pitch_rate_cells_ml: z.number({ message: "Pitch Rate is required" }).positive("Must be positive"),
 });
 
 // --- Response Schema ---
 
 export const PredictionPredictionsSchema = z.object({
-  quality_score: z.number(),
-  quality_score_error_band: z.number(),
-  residual_sugar: z.number(),
-  acidity: z.number(),
-  amino_acidity: z.number(),
-  astringency: z.number(),
-  alcohol_intensity: z.number(),
-  fruity_prob: z.number(),
-  floral_prob: z.number(),
-  off_flavor_prob: z.number(),
+  predicted_quality_score: z.number(),
+  prediction_error_band: z.number(),
+  estimated_final_brix: z.number(),
+  estimated_final_acidity: z.number(),
+  estimated_amino_acidity: z.number(),
+  predicted_texture_astringency: z.number(),
+  predicted_alcohol_burn_intensity: z.number(),
+  predicted_floral_probability: z.number(),
+  predicted_off_flavor_probability: z.number(),
 });
 
 export const PredictionResponseSchema = z.object({
@@ -34,6 +32,8 @@ export const PredictionResponseSchema = z.object({
   predictions: PredictionPredictionsSchema,
   qc_status: z.string(),
   qc_flags: z.array(z.string()),
+  model_version: z.string(),
+  schema_version: z.string(),
 });
 
 // --- Error Schema (422) ---
