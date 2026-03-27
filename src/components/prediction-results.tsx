@@ -2,6 +2,7 @@
 
 import type { PredictionResponse } from "@pferm/shared-schemas";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Progress } from "@/components/ui/progress";
 import { QcStatusBanner } from "@/components/ui/qc-status-banner";
 
 interface PredictionResultsProps {
@@ -95,19 +96,12 @@ export function PredictionResults({ response }: PredictionResultsProps) {
                         {percent}%{isHighRisk && <span className="sr-only"> (high risk)</span>}
                       </dd>
                     </div>
-                    <div
-                      role="progressbar"
-                      aria-valuenow={Number(percent)}
-                      aria-valuemin={0}
-                      aria-valuemax={100}
+                    <Progress
+                      value={Number(percent)}
                       aria-label={`${label} probability: ${percent}%`}
-                      className="h-2 rounded-sm bg-muted overflow-hidden"
-                    >
-                      <div
-                        className={`h-full rounded-sm transition-all ${isHighRisk ? "bg-destructive" : "bg-primary"}`}
-                        style={{ width: `${percent}%` }}
-                      />
-                    </div>
+                      className="h-2 rounded-sm bg-muted"
+                      indicatorClassName={`rounded-sm ${isHighRisk ? "bg-destructive" : ""}`}
+                    />
                   </div>
                 );
               })}

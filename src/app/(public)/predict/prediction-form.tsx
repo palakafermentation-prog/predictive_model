@@ -11,7 +11,7 @@ import { useSession } from "@/hooks/use-session";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/components/ui/form";
 import { PredictionResults } from "@/components/prediction-results";
 
 const INPUT_GROUPS = [
@@ -59,11 +59,7 @@ export function PredictionForm() {
   const [result, setResult] = useState<PredictionResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const {
-    register,
-    handleSubmit,
-    formState: { errors, isSubmitting },
-  } = useForm<PredictionRequest>({
+  const form = useForm<PredictionRequest>({
     resolver: zodResolver(PredictionRequestSchema),
     defaultValues: getDefaults(),
   });
@@ -82,6 +78,8 @@ export function PredictionForm() {
           predictions: response.predictions,
           qcStatus: response.qc_status,
           qcFlags: response.qc_flags,
+          modelVersion: response.model_version,
+          schemaVersion: response.schema_version,
         }).catch(() => toast.error("Results could not be saved to your batches."));
       }
     } catch (err) {
@@ -92,70 +90,65 @@ export function PredictionForm() {
 
   return (
     <div className="space-y-8">
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-        {/* Batch ID — inline */}
-        <div className="flex items-center gap-3">
-          <Label htmlFor="batch_id" className="shrink-0">Batch ID</Label>
-          <Input
-            id="batch_id"
-            placeholder="e.g. MY_BATCH_001"
-            className="max-w-xs"
-            aria-invalid={!!errors.batch_id}
-            aria-describedby={errors.batch_id ? "batch_id-error" : undefined}
-            {...register("batch_id")}
-          />
-          {errors.batch_id && (
-            <p id="batch_id-error" className="text-sm text-destructive">{errors.batch_id.message}</p>
-          )}
-        </div>
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+          {/* Batch ID — inline */}
+          <FormField control={form.control} name="batch_id" render={({ field }) => (
+            <FormItem className="flex items-center gap-3 space-y-0">
+              <FormLabel className="shrink-0">Batch ID</FormLabel>
+              <FormControl>
+                <Input placeholder="e.g. MY_BATCH_001" className="max-w-xs" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )} />
 
-        {/* Input groups as flat sections */}
-        {INPUT_GROUPS.map((group) => (
-          <div key={group.title}>
-            <h2 className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
-              {group.title}
-            </h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-              {group.fields.map((field) => (
-                <div key={field.name}>
-                  <Label htmlFor={field.name} className="text-sm">
-                    {field.label}
-                    {field.unit && (
-                      <span className="ml-1 text-xs text-muted-foreground font-normal">
-                        ({field.unit})
-                      </span>
-                    )}
-                  </Label>
-                  <Input
-                    id={field.name}
-                    type="number"
-                    step={field.step}
-                    className="mt-1"
-                    aria-invalid={!!errors[field.name]}
-                    aria-describedby={errors[field.name] ? `${field.name}-error` : undefined}
-                    {...register(field.name, { valueAsNumber: true })}
-                  />
-                  {errors[field.name] && (
-                    <p id={`${field.name}-error`} className="mt-0.5 text-xs text-destructive">
-                      {errors[field.name]?.message}
-                    </p>
-                  )}
-                </div>
-              ))}
+          {/* Input groups as flat sections */}
+          {INPUT_GROUPS.map((group) => (
+            <div key={group.title}>
+              <h2 className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                {group.title}
+              </h2>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                {group.fields.map((f) => (
+                  <FormField key={f.name} control={form.control} name={f.name} render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-sm">
+                        {f.label}
+                        {f.unit && (
+                          <span className="ml-1 text-xs text-muted-foreground font-normal">
+                            ({f.unit})
+                          </span>
+                        )}
+                      </FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          step={f.step}
+                          className="mt-1"
+                          {...field}
+                          onChange={(e) => field.onChange(e.target.valueAsNumber)}
+                        />
+                      </FormControl>
+                      <FormMessage className="mt-0.5 text-xs" />
+                    </FormItem>
+                  )} />
+                ))}
+              </div>
             </div>
-          </div>
-        ))}
+          ))}
 
-        {error && (
-          <div role="alert" className="rounded-lg border border-destructive/50 bg-destructive/10 px-4 py-3 text-sm text-destructive">
-            {error}
-          </div>
-        )}
+          {error && (
+            <div role="alert" className="rounded-lg border border-destructive/50 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+              {error}
+            </div>
+          )}
 
-        <Button type="submit" size="lg" className="w-full md:w-auto" disabled={isSubmitting}>
-          {isSubmitting ? "Running prediction\u2026" : "Run Prediction"}
-        </Button>
-      </form>
+          <Button type="submit" size="lg" className="w-full md:w-auto" disabled={form.formState.isSubmitting}>
+            {form.formState.isSubmitting ? "Running prediction\u2026" : "Run Prediction"}
+          </Button>
+        </form>
+      </Form>
 
       <div aria-live="polite">
         {result && <PredictionResults response={result} />}

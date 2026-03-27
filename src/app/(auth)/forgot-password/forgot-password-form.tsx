@@ -24,10 +24,14 @@ export function ForgotPasswordForm() {
 
   const onSubmit = async (data: ForgotPasswordForm) => {
     try {
-      await forgotPassword(data.email);
-      setSuccess(true);
+      const result = await forgotPassword(data.email);
+      if (result.emailFailed) {
+        toast.error(result.message);
+      } else {
+        setSuccess(true);
+      }
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Request failed");
+      toast.error(error instanceof Error ? error.message : "Something went wrong. Please try again.");
     }
   };
 

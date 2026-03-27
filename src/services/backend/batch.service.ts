@@ -21,6 +21,8 @@ const batchDetailSelect = {
   qualityScore: true,
   qcStatus: true,
   qcFlags: true,
+  modelVersion: true,
+  schemaVersion: true,
   createdAt: true,
   updatedAt: true,
 } as const;
@@ -82,6 +84,8 @@ export async function saveBatch(user: UserSession, data: BatchSaveRequest) {
       qualityScore: data.predictions.predicted_quality_score,
       qcStatus: data.qcStatus,
       qcFlags: data.qcFlags,
+      modelVersion: data.modelVersion,
+      schemaVersion: data.schemaVersion,
     },
     create: {
       id: generateBatchId(),
@@ -92,6 +96,8 @@ export async function saveBatch(user: UserSession, data: BatchSaveRequest) {
       qualityScore: data.predictions.predicted_quality_score,
       qcStatus: data.qcStatus,
       qcFlags: data.qcFlags,
+      modelVersion: data.modelVersion,
+      schemaVersion: data.schemaVersion,
     },
     select: batchListSelect,
   });
@@ -127,6 +133,8 @@ export async function processCsvUpload(user: UserSession, rows: PredictionReques
         predictions: response.predictions,
         qcStatus: response.qc_status,
         qcFlags: response.qc_flags,
+        modelVersion: response.model_version,
+        schemaVersion: response.schema_version,
       });
       saved.push(batch);
     } catch (error) {

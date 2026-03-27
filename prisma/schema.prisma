@@ -127,11 +127,13 @@ model Batch {
   userId       String   @db.VarChar(32)
   batchId      String   // user-provided batch identifier
   parameters   Json     // PredictionRequest fields (excluding batch_id)
-  predictions  Json     // PredictionPredictions object
-  qualityScore Float    // denormalized from predictions.quality_score
-  qcStatus     String   // denormalized from prediction response
-  qcFlags      Json     // array of QC flag strings
-  createdAt    DateTime @default(now()) @db.Timestamptz
+  predictions   Json     // PredictionPredictions object
+  qualityScore  Float    // denormalized from predictions.quality_score
+  qcStatus      String   // denormalized from prediction response
+  qcFlags       Json     // array of QC flag strings
+  modelVersion  String?  // AI model version that produced the prediction
+  schemaVersion String?  // schema version of the prediction API
+  createdAt     DateTime @default(now()) @db.Timestamptz
   updatedAt    DateTime @updatedAt @db.Timestamptz
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)

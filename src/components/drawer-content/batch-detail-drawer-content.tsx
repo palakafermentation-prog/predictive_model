@@ -53,6 +53,8 @@ export default function BatchDetailDrawerContent({ id }: BatchDetailDrawerConten
     predictions: batch.predictions,
     qc_status: batch.qcStatus,
     qc_flags: batch.qcFlags,
+    model_version: batch.modelVersion ?? undefined,
+    schema_version: batch.schemaVersion ?? undefined,
   };
 
   return (
