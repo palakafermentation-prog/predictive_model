@@ -10,14 +10,13 @@ interface BatchDetailDrawerContentProps {
 }
 
 const PARAMETER_LABELS: Record<string, string> = {
-  Rice_Polish_Ratio: "Polish Ratio (%)",
-  Water_Hardness_ppm: "Water Hardness (ppm)",
-  Water_pH: "Water pH",
-  Koji_Incubation_Temp_C: "Koji Incubation Temp (°C)",
-  Koji_Incubation_Hours: "Koji Incubation Hours",
-  Yeast_Pitch_Rate_cells_mL: "Yeast Pitch Rate (cells/mL)",
-  Moromi_Duration_Days: "Moromi Duration (days)",
-  Initial_Temperature_C: "Initial Temperature (°C)",
+  rice_polish_ratio: "Polish Ratio (%)",
+  water_hardness_ppm: "Water Hardness (ppm)",
+  water_ph: "Water pH",
+  koji_incubation_hours: "Koji Incubation Hours",
+  yeast_pitch_rate_cells_ml: "Yeast Pitch Rate (cells/mL)",
+  moromi_duration_days: "Moromi Duration (days)",
+  initial_temperature_c: "Initial Temperature (°C)",
 };
 
 export default function BatchDetailDrawerContent({ id }: BatchDetailDrawerContentProps) {
@@ -70,7 +69,7 @@ export default function BatchDetailDrawerContent({ id }: BatchDetailDrawerConten
                 {PARAMETER_LABELS[key] ?? key}
               </dt>
               <dd className="text-sm font-medium font-mono">
-                {typeof value === "number" && key === "Yeast_Pitch_Rate_cells_mL"
+                {typeof value === "number" && key === "yeast_pitch_rate_cells_ml"
                   ? value.toLocaleString()
                   : value}
               </dd>

@@ -24,14 +24,13 @@ import type { BatchListItem, PredictionRequest } from "@pferm/shared-schemas";
 // --- CSV Parsing ---
 
 const NUMERIC_FIELDS = [
-  "Rice_Polish_Ratio",
-  "Water_Hardness_ppm",
-  "Water_pH",
-  "Koji_Incubation_Temp_C",
-  "Koji_Incubation_Hours",
-  "Yeast_Pitch_Rate_cells_mL",
-  "Moromi_Duration_Days",
-  "Initial_Temperature_C",
+  "rice_polish_ratio",
+  "water_hardness_ppm",
+  "water_ph",
+  "koji_incubation_hours",
+  "yeast_pitch_rate_cells_ml",
+  "moromi_duration_days",
+  "initial_temperature_c",
 ] as const;
 
 function parseCsv(text: string): PredictionRequest[] {
@@ -116,24 +115,37 @@ export function BatchesClient() {
         return;
       }
 
-      const newBatches = await uploadCsv(result.data.rows);
-      setBatches((prev) => {
-        // Merge: replace existing by batchId, append new
-        const existingIds = new Set(prev.map((b) => b.batchId));
-        const updated = prev.map((b) => {
-          const updated = newBatches.find((nb) => nb.batchId === b.batchId);
-          return updated ?? b;
+      const uploadResult = await uploadCsv(result.data.rows);
+      const newBatches = uploadResult.batches;
+
+      if (newBatches.length > 0) {
+        setBatches((prev) => {
+          const existingIds = new Set(prev.map((b) => b.batchId));
+          const updated = prev.map((b) => {
+            const match = newBatches.find((nb) => nb.batchId === b.batchId);
+            return match ?? b;
+          });
+          newBatches.forEach((nb) => {
+            if (!existingIds.has(nb.batchId)) updated.push(nb);
+          });
+          return updated.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
         });
-        newBatches.forEach((nb) => {
-          if (!existingIds.has(nb.batchId)) updated.push(nb);
-        });
-        return updated.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
-      });
+      }
+
+      if (uploadResult.errors.length > 0) {
+        const errorMsgs = uploadResult.errors.map(
+          (e) => `Row ${e.row} (${e.batchId}): ${e.message}`
+        );
+        if (newBatches.length > 0) {
+          errorMsgs.unshift(`${newBatches.length} of ${rows.length} batches processed successfully.`);
+        }
+        setCsvErrors(errorMsgs);
+      }
 
       setCsvFile(null);
       if (fileInputRef.current) fileInputRef.current.value = "";
     } catch (err) {
-      setCsvErrors([err instanceof Error ? err.message : "Upload failed"]);
+      setCsvErrors([err instanceof Error ? err.message : "Something went wrong. Please try again."]);
       setCsvFile(null);
       if (fileInputRef.current) fileInputRef.current.value = "";
     } finally {

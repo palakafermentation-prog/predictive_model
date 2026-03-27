@@ -32,8 +32,8 @@ export const PredictionResponseSchema = z.object({
   predictions: PredictionPredictionsSchema,
   qc_status: z.string(),
   qc_flags: z.array(z.string()),
-  model_version: z.string(),
-  schema_version: z.string(),
+  model_version: z.string().optional(),
+  schema_version: z.string().optional(),
 });
 
 // --- Error Schema (422) ---

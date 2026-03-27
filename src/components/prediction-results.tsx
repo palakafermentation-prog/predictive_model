@@ -116,10 +116,14 @@ export function PredictionResults({ response }: PredictionResultsProps) {
         </Card>
       </div>
 
-      {/* Metadata footer */}
-      <p className="text-xs text-muted-foreground font-mono text-right">
-        Model: {model_version} &middot; Schema: {schema_version}
-      </p>
+      {/* Metadata footer — only shown when version info is available */}
+      {(model_version || schema_version) && (
+        <p className="text-xs text-muted-foreground font-mono text-right">
+          {model_version && <>Model: {model_version}</>}
+          {model_version && schema_version && <> &middot; </>}
+          {schema_version && <>Schema: {schema_version}</>}
+        </p>
+      )}
     </div>
   );
 }
