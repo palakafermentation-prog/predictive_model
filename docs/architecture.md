@@ -148,6 +148,8 @@ erDiagram
         float qualityScore
         string qcStatus
         json qcFlags
+        string modelVersion
+        string schemaVersion
     }
     MediaFile {
         string id PK
