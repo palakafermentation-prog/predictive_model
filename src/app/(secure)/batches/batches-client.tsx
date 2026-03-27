@@ -252,7 +252,7 @@ export function BatchesClient() {
                 <TableHead>Quality Score</TableHead>
                 <TableHead>QC Status</TableHead>
                 <TableHead>Updated</TableHead>
-                <TableHead className="w-10" />
+                <TableHead className="w-10"><span className="sr-only">Actions</span></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>

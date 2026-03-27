@@ -92,7 +92,7 @@ export function PredictionResults({ response }: PredictionResultsProps) {
                     <div className="flex items-center justify-between">
                       <dt className="text-sm text-muted-foreground">{label}</dt>
                       <dd className={`text-sm font-medium font-mono ${isHighRisk ? "text-destructive" : ""}`}>
-                        {percent}%
+                        {percent}%{isHighRisk && <span className="sr-only"> (high risk)</span>}
                       </dd>
                     </div>
                     <div

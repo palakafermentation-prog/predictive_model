@@ -112,9 +112,9 @@ export function PredictionForm() {
         {/* Input groups as flat sections */}
         {INPUT_GROUPS.map((group) => (
           <div key={group.title}>
-            <h3 className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+            <h2 className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
               {group.title}
-            </h3>
+            </h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
               {group.fields.map((field) => (
                 <div key={field.name}>
@@ -157,7 +157,9 @@ export function PredictionForm() {
         </Button>
       </form>
 
-      {result && <PredictionResults response={result} />}
+      <div aria-live="polite">
+        {result && <PredictionResults response={result} />}
+      </div>
     </div>
   );
 }
