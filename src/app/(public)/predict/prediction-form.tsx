@@ -8,6 +8,7 @@ import type { PredictionRequest, PredictionResponse } from "@pferm/shared-schema
 import { predict } from "@/services/frontend/prediction";
 import { saveBatch } from "@/services/frontend/batch";
 import { useSession } from "@/hooks/use-session";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -17,29 +18,28 @@ const INPUT_GROUPS = [
   {
     title: "Rice",
     fields: [
-      { name: "Rice_Polish_Ratio" as const, label: "Polish Ratio", unit: "%", step: 1, defaultValue: 60 },
+      { name: "rice_polish_ratio" as const, label: "Polish Ratio", unit: "%", step: 1, defaultValue: 60 },
     ],
   },
   {
     title: "Water",
     fields: [
-      { name: "Water_Hardness_ppm" as const, label: "Hardness", unit: "ppm", step: 1, defaultValue: 45 },
-      { name: "Water_pH" as const, label: "pH", unit: "", step: 0.1, defaultValue: 6.6 },
+      { name: "water_hardness_ppm" as const, label: "Hardness", unit: "ppm", step: 1, defaultValue: 45 },
+      { name: "water_ph" as const, label: "pH", unit: "", step: 0.1, defaultValue: 6.5 },
     ],
   },
   {
     title: "Koji",
     fields: [
-      { name: "Koji_Incubation_Temp_C" as const, label: "Incubation Temp", unit: "\u00B0C", step: 0.5, defaultValue: 30 },
-      { name: "Koji_Incubation_Hours" as const, label: "Incubation Hours", unit: "hrs", step: 1, defaultValue: 44 },
-      { name: "Yeast_Pitch_Rate_cells_mL" as const, label: "Yeast Pitch Rate", unit: "cells/mL", step: 1000000, defaultValue: 100000000 },
+      { name: "koji_incubation_hours" as const, label: "Incubation Hours", unit: "hrs", step: 1, defaultValue: 44 },
+      { name: "yeast_pitch_rate_cells_ml" as const, label: "Yeast Pitch Rate", unit: "cells/mL", step: 1000000, defaultValue: 100000000 },
     ],
   },
   {
     title: "Fermentation",
     fields: [
-      { name: "Moromi_Duration_Days" as const, label: "Moromi Duration", unit: "days", step: 1, defaultValue: 25 },
-      { name: "Initial_Temperature_C" as const, label: "Initial Temp", unit: "\u00B0C", step: 0.5, defaultValue: 10 },
+      { name: "moromi_duration_days" as const, label: "Moromi Duration", unit: "days", step: 1, defaultValue: 25 },
+      { name: "initial_temperature_c" as const, label: "Initial Temp", unit: "\u00B0C", step: 0.5, defaultValue: 10 },
     ],
   },
 ];
@@ -82,10 +82,10 @@ export function PredictionForm() {
           predictions: response.predictions,
           qcStatus: response.qc_status,
           qcFlags: response.qc_flags,
-        }).catch(() => {});
+        }).catch(() => toast.error("Results could not be saved to your batches."));
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Prediction failed");
+      setError(err instanceof Error ? err.message : "Something went wrong. Please try again.");
       setResult(null);
     }
   }
