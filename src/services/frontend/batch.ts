@@ -46,12 +46,23 @@ export async function deleteBatch(id: string): Promise<void> {
   if (isApiError(response)) throw new Error(response.error.message);
 }
 
-export async function uploadCsv(rows: CsvUploadRequest["rows"]): Promise<BatchListItem[]> {
-  const response = await apiFetch<{ batches: BatchListItem[] }>(`${baseUrl}/batches/csv`, {
+export interface CsvUploadRowError {
+  row: number;
+  batchId: string;
+  message: string;
+}
+
+export interface CsvUploadResult {
+  batches: BatchListItem[];
+  errors: CsvUploadRowError[];
+}
+
+export async function uploadCsv(rows: CsvUploadRequest["rows"]): Promise<CsvUploadResult> {
+  const response = await apiFetch<CsvUploadResult>(`${baseUrl}/batches/csv`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ rows }),
   });
   if (isApiError(response)) throw new Error(response.error.message);
-  return response.data.batches;
+  return response.data;
 }

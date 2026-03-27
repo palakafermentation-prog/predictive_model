@@ -1,0 +1,88 @@
+import type { PredictionRequest, PredictionResponse } from "@pferm/shared-schemas";
+
+/**
+ * Simple hash from batch_id to get deterministic pseudo-random values
+ */
+function hashCode(str: string): number {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    hash = ((hash << 5) - hash + str.charCodeAt(i)) | 0;
+  }
+  return Math.abs(hash);
+}
+
+function seededRandom(seed: number, index: number): number {
+  const x = Math.sin(seed + index) * 10000;
+  return x - Math.floor(x);
+}
+
+/**
+ * Generate a semi-realistic mock prediction response from inputs.
+ * Deterministic per batch_id so the same inputs produce the same outputs.
+ */
+export function generateMockPrediction(input: PredictionRequest): PredictionResponse {
+  const seed = hashCode(input.batch_id);
+  const rand = (i: number) => seededRandom(seed, i);
+
+  // Lower rice_polish_ratio = more polished = higher quality (30% most polished, 90% least)
+  const polishFactor = (90 - input.rice_polish_ratio) / 60; // 0 at 90%, 1 at 30%
+  // Cooler initial temperatures favor fermentation quality (sweet spot ~10°C in 5–20°C range)
+  const tempFactor = 1 - Math.abs(input.initial_temperature_c - 10) / 15;
+  // Moderate fermentation duration is optimal (sweet spot ~30 days in 15–45 day range)
+  const durationFactor = 1 - Math.abs(input.moromi_duration_days - 30) / 15;
+
+  // predicted_quality_score: 1–5 scale
+  const baseQuality = 1 + polishFactor * 1.5 + Math.max(0, tempFactor) * 0.75 + Math.max(0, durationFactor) * 0.75;
+  const predicted_quality_score = Math.round(Math.min(5, Math.max(1, baseQuality + rand(0) * 0.5 - 0.25)) * 100) / 100;
+  const prediction_error_band = Math.round((0.1 + rand(1) * 0.3) * 100) / 100;
+
+  const estimated_final_brix = Math.round((4 + rand(2) * 6) * 100) / 100; // 4–10 °Bx
+  const estimated_final_acidity = Math.round((1.0 + rand(3) * 1.5) * 100) / 100; // 1.0–2.5
+  const estimated_amino_acidity = Math.round((0.5 + rand(4) * 1.0) * 100) / 100; // 0.5–1.5
+  const predicted_texture_astringency = Math.round((1.0 + rand(5) * 3.0) * 100) / 100; // 1–4
+  const predicted_alcohol_burn_intensity = Math.round((1.0 + rand(6) * 3.0) * 100) / 100; // 1–4
+
+  const predicted_floral_probability = Math.round(rand(7) * 100) / 100;
+  const predicted_off_flavor_probability = Math.round(rand(8) * 0.4 * 100) / 100;
+
+  // Determine QC status based on quality and off-flavor risk
+  let qc_status: string;
+  const qc_flags: string[] = [];
+
+  if (predicted_off_flavor_probability > 0.3) {
+    qc_status = "\uD83D\uDEA8 High off-flavor risk";
+    qc_flags.push(`Off-flavor probability ${(predicted_off_flavor_probability * 100).toFixed(0)}% exceeds threshold`);
+  } else if (predicted_quality_score < 2.5 || input.koji_incubation_hours > 50) {
+    qc_status = "\u26A0\uFE0F Warning";
+    if (predicted_quality_score < 2.5) {
+      qc_flags.push("Quality score below target range");
+    }
+    if (input.koji_incubation_hours > 50) {
+      qc_flags.push("Koji incubation hours near upper limit — risk of over-saccharification");
+    }
+    if (estimated_final_brix > 9) {
+      qc_flags.push("Elevated Brix — potential sweetness imbalance");
+    }
+  } else {
+    qc_status = "\u2705 Optimal Spec";
+  }
+
+  return {
+    batch_id: input.batch_id,
+    predictions: {
+      predicted_quality_score,
+      prediction_error_band,
+      estimated_final_brix,
+      estimated_final_acidity,
+      estimated_amino_acidity,
+      predicted_texture_astringency,
+      predicted_alcohol_burn_intensity,
+      predicted_floral_probability,
+      predicted_off_flavor_probability,
+    },
+    qc_status,
+    qc_flags,
+    model_version: "mock-1.0",
+    schema_version: "v0.1",
+  };
+}

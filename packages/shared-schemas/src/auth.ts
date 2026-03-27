@@ -47,6 +47,7 @@ export const SessionResponseSchema = z.object({
 
 export const ForgotPasswordResponseSchema = z.object({
   message: z.string(),
+  emailFailed: z.boolean().optional(),
 });
 
 export const ResetPasswordResponseSchema = z.object({

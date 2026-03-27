@@ -12,6 +12,7 @@ export enum ErrorCode {
   INTERNAL = "INTERNAL",
   VALIDATION = "VALIDATION",
   EMAIL_NOT_VERIFIED = "EMAIL_NOT_VERIFIED",
+  SERVICE_UNAVAILABLE = "SERVICE_UNAVAILABLE",
 }
 
 export class HttpError extends Error {
@@ -60,5 +61,11 @@ export class ConflictError extends HttpError {
 export class EmailNotVerifiedError extends HttpError {
   constructor(message: string = "Please verify your email before signing in") {
     super(message, 403, ErrorCode.EMAIL_NOT_VERIFIED);
+  }
+}
+
+export class ServiceUnavailableError extends HttpError {
+  constructor(message: string = "Service temporarily unavailable") {
+    super(message, 503, ErrorCode.SERVICE_UNAVAILABLE);
   }
 }

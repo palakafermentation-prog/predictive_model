@@ -18,9 +18,12 @@ export async function POST(request: Request) {
 
     const body = await request.json();
     const { rows } = CsvUploadRequestSchema.parse(body);
-    const batches = await processCsvUpload(session.user, rows);
+    const result = await processCsvUpload(session.user, rows);
 
-    return NextResponse.json({ data: { batches }, requestId }, { status: 201 });
+    return NextResponse.json({
+      data: { batches: result.saved, errors: result.errors },
+      requestId,
+    }, { status: result.errors.length > 0 ? 207 : 201 });
   } catch (error) {
     return handleApiError(error, { route: "POST /api/batches/csv", userId: session?.user?.id, requestId });
   }

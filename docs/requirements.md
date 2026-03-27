@@ -73,6 +73,36 @@
 - Publicly accessible (no sign-in required)
 - When a signed-in user runs a prediction, the result is silently auto-saved as a batch (no error shown if save fails)
 
+### Input Fields (schema v0.1)
+
+| Field | Type | Range | Description |
+|---|---|---|---|
+| `batch_id` | string | 1–100 chars | Identifier for the batch run |
+| `rice_polish_ratio` | float | 30–90% | Rice polishing ratio |
+| `koji_incubation_hours` | float | 12–60 | Koji incubation duration |
+| `moromi_duration_days` | float | 15–45 | Moromi fermentation duration |
+| `initial_temperature_c` | float | 5–20°C | Initial mash temperature |
+| `water_ph` | float | 3.0–8.0 | Water pH |
+| `water_hardness_ppm` | float | 5–100 ppm | Water hardness |
+| `yeast_pitch_rate_cells_ml` | float | > 0 | Yeast pitch rate (cells/mL) |
+
+### Output Fields (schema v0.1)
+
+| Field | Description |
+|---|---|
+| `predicted_quality_score` | Overall quality score, 1–5 scale |
+| `prediction_error_band` | Confidence interval around the quality score |
+| `estimated_final_brix` | Estimated residual sugar (Brix) |
+| `estimated_final_acidity` | Estimated final acidity |
+| `estimated_amino_acidity` | Estimated amino acid content |
+| `predicted_texture_astringency` | Texture/astringency prediction |
+| `predicted_alcohol_burn_intensity` | Alcohol burn intensity prediction |
+| `predicted_floral_probability` | Probability of floral character |
+| `predicted_off_flavor_probability` | Probability of off-flavor |
+| `qc_flags` | Array of quality control flag strings |
+| `model_version` | AI model version that generated the prediction |
+| `schema_version` | Schema version used (e.g., `v0.1`) |
+
 ## Batches (/batches)
 
 - Accessible without sign-in, but unauthenticated users see a non-dismissable dialog explaining the feature and prompting sign-in
@@ -81,7 +111,7 @@
 **Batch persistence:**
 - A batch is a saved prediction run — when a signed-in user submits a prediction on `/predict`, it is automatically saved or updated
 - Keyed by `(userId, batchId)` — submitting with an existing batch ID overwrites the stored parameters and results
-- Each batch stores: input parameters, prediction results, quality score, QC status, QC flags
+- Each batch stores: input parameters, prediction results, quality score (1–5 scale), QC status, QC flags, model version, schema version
 
 **Batch list table:**
 - Columns: Batch ID, Quality Score, QC Status, Updated date

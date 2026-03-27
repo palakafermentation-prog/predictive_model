@@ -17,6 +17,8 @@ export const BatchSaveRequestSchema = z.object({
   predictions: PredictionPredictionsSchema,
   qcStatus: z.string(),
   qcFlags: z.array(z.string()),
+  modelVersion: z.string().optional(),
+  schemaVersion: z.string().optional(),
 });
 
 // CSV upload — rows are the full PredictionRequest (includes batch_id per row)
@@ -45,6 +47,8 @@ export const BatchDetailSchema = z.object({
   qualityScore: z.number(),
   qcStatus: z.string(),
   qcFlags: z.array(z.string()),
+  modelVersion: z.string().nullable().optional(),
+  schemaVersion: z.string().nullable().optional(),
   createdAt: z.coerce.date(),
   updatedAt: z.coerce.date(),
 });

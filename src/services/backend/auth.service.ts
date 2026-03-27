@@ -114,6 +114,10 @@ export async function signup(
     },
   });
 
+  // BetterAuth sends verification email during signUpEmail().
+  // If SMTP failed, the account was still created but the email wasn't sent.
+  // We can't easily detect that here since the error is swallowed by BetterAuth.
+  // The resendVerification flow handles retries.
   return {
     message: "Account created. Please check your email to verify your account before signing in.",
   };
@@ -247,12 +251,21 @@ export async function verifyEmail(token: string): Promise<{ message: string }> {
 /**
  * Resend verification email. Always returns success to prevent user enumeration.
  */
-export async function resendVerification(email: string): Promise<{ message: string }> {
+export async function resendVerification(email: string): Promise<{ message: string; emailFailed?: boolean }> {
   try {
     await auth.api.sendVerificationEmail({ body: { email } });
   } catch (error) {
-    // Swallow errors — don't expose whether the email exists
     console.error("Resend verification error:", error);
+    const isSmtpError = error instanceof Error && (
+      error.message.includes("SMTP") || error.message.includes("ECONNREFUSED") ||
+      error.message.includes("ETIMEDOUT") || error.message.includes("connect")
+    );
+    if (isSmtpError) {
+      return {
+        message: "Verification email could not be sent. Please try again later.",
+        emailFailed: true,
+      };
+    }
   }
 
   return {
@@ -263,13 +276,23 @@ export async function resendVerification(email: string): Promise<{ message: stri
 /**
  * Request password reset — sends reset link via configured callback (logs to console in dev)
  */
-export async function forgotPassword(email: string): Promise<{ message: string }> {
+export async function forgotPassword(email: string): Promise<{ message: string; emailFailed?: boolean }> {
   try {
     await auth.api.requestPasswordReset({
       body: { email, redirectTo: "/reset-password" },
     });
   } catch (error) {
     console.error("Forgot password error:", error);
+    const isSmtpError = error instanceof Error && (
+      error.message.includes("SMTP") || error.message.includes("ECONNREFUSED") ||
+      error.message.includes("ETIMEDOUT") || error.message.includes("connect")
+    );
+    if (isSmtpError) {
+      return {
+        message: "Password reset email could not be sent. Please try again later.",
+        emailFailed: true,
+      };
+    }
   }
 
   return {
