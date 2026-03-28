@@ -1,0 +1,9 @@
+{
+  "name": "@pferm/typescript-config",
+  "version": "0.1.7",
+  "private": true,
+  "files": [
+    "*.json"
+  ],
+  "license": "MIT"
+}
