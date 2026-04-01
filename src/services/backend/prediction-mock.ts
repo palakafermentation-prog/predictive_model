@@ -24,12 +24,12 @@ export function generateMockPrediction(input: PredictionRequest): PredictionResp
   const seed = hashCode(input.batch_id);
   const rand = (i: number) => seededRandom(seed, i);
 
-  // Lower rice_polish_ratio = more polished = higher quality (30% most polished, 90% least)
-  const polishFactor = (90 - input.rice_polish_ratio) / 60; // 0 at 90%, 1 at 30%
+  // Lower rice_polish_ratio = more polished = higher quality (30% most polished, 100% least)
+  const polishFactor = (100 - input.rice_polish_ratio) / 70; // 0 at 100%, 1 at 30%
   // Cooler initial temperatures favor fermentation quality (sweet spot ~10°C in 5–20°C range)
   const tempFactor = 1 - Math.abs(input.initial_temperature_c - 10) / 15;
-  // Moderate fermentation duration is optimal (sweet spot ~30 days in 15–45 day range)
-  const durationFactor = 1 - Math.abs(input.moromi_duration_days - 30) / 15;
+  // Moderate fermentation duration is optimal (sweet spot ~30 days in 10–120 day range)
+  const durationFactor = 1 - Math.abs(input.moromi_duration_days - 30) / 90;
 
   // predicted_quality_score: 1–5 scale
   const baseQuality = 1 + polishFactor * 1.5 + Math.max(0, tempFactor) * 0.75 + Math.max(0, durationFactor) * 0.75;
@@ -83,6 +83,6 @@ export function generateMockPrediction(input: PredictionRequest): PredictionResp
     qc_status,
     qc_flags,
     model_version: "mock-1.0",
-    schema_version: "v0.1",
+    schema_version: "v0.2",
   };
 }
