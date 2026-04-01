@@ -73,20 +73,20 @@
 - Publicly accessible (no sign-in required)
 - When a signed-in user runs a prediction, the result is silently auto-saved as a batch (no error shown if save fails)
 
-### Input Fields (schema v0.1)
+### Input Fields (schema v0.2)
 
 | Field | Type | Range | Description |
 |---|---|---|---|
 | `batch_id` | string | 1–100 chars | Identifier for the batch run |
-| `rice_polish_ratio` | float | 30–90% | Rice polishing ratio |
+| `rice_polish_ratio` | float | 30–100% | Rice polishing ratio |
 | `koji_incubation_hours` | float | 12–60 | Koji incubation duration |
-| `moromi_duration_days` | float | 15–45 | Moromi fermentation duration |
+| `moromi_duration_days` | float | 10–120 | Moromi fermentation duration |
 | `initial_temperature_c` | float | 5–20°C | Initial mash temperature |
 | `water_ph` | float | 3.0–8.0 | Water pH |
 | `water_hardness_ppm` | float | 5–100 ppm | Water hardness |
 | `yeast_pitch_rate_cells_ml` | float | > 0 | Yeast pitch rate (cells/mL) |
 
-### Output Fields (schema v0.1)
+### Output Fields (schema v0.2)
 
 | Field | Description |
 |---|---|
@@ -101,7 +101,7 @@
 | `predicted_off_flavor_probability` | Probability of off-flavor |
 | `qc_flags` | Array of quality control flag strings |
 | `model_version` | AI model version that generated the prediction |
-| `schema_version` | Schema version used (e.g., `v0.1`) |
+| `schema_version` | Schema version used (e.g., `v0.2`) |
 
 ## Batches (/batches)
 
