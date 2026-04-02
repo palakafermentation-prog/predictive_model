@@ -17,6 +17,7 @@ _MODEL_PATH = os.environ.get("MODEL_PATH", "")
 
 # Live predictor loaded once at startup (MODEL_MODE=live only)
 _live_pipeline: object | None = None
+_live_feature_names: list[str] | None = None
 
 if _MODEL_MODE == "live":
     if not _MODEL_PATH:
@@ -26,6 +27,8 @@ if _MODEL_MODE == "live":
 
         artifact = joblib.load(_MODEL_PATH)
         _live_pipeline = artifact["pipeline"]
+        metadata = artifact.get("metadata", {})
+        _live_feature_names = metadata.get("feature_names")
         logger.info("Loaded live model from %s", _MODEL_PATH)
     except Exception as exc:
         raise RuntimeError(f"Failed to load model from {_MODEL_PATH}: {exc}") from exc
@@ -56,19 +59,25 @@ def _predict_live(request: PredictionRequest) -> PredictionResponse:
 
     from schemas import PredictionPredictions
 
-    features = pd.DataFrame(
-        [
-            {
-                "rice_polish_ratio": request.rice_polish_ratio,
-                "koji_incubation_hours": request.koji_incubation_hours,
-                "moromi_duration_days": request.moromi_duration_days,
-                "initial_temperature_c": request.initial_temperature_c,
-                "water_ph": request.water_ph,
-                "water_hardness_ppm": request.water_hardness_ppm,
-                "yeast_pitch_rate_cells_ml": request.yeast_pitch_rate_cells_ml,
-            }
-        ]
-    )
+    feature_dict = {
+        "rice_polish_ratio": request.rice_polish_ratio,
+        "koji_incubation_hours": request.koji_incubation_hours,
+        "moromi_duration_days": request.moromi_duration_days,
+        "initial_temperature_c": request.initial_temperature_c,
+        "water_ph": request.water_ph,
+        "water_hardness_ppm": request.water_hardness_ppm,
+        "yeast_pitch_rate_cells_ml": request.yeast_pitch_rate_cells_ml,
+    }
+
+    if _live_feature_names is not None:
+        missing = set(_live_feature_names) - set(feature_dict.keys())
+        extra = set(feature_dict.keys()) - set(_live_feature_names)
+        if missing or extra:
+            raise ValueError(
+                f"Feature mismatch: missing={missing or 'none'}, extra={extra or 'none'}"
+            )
+
+    features = pd.DataFrame([feature_dict])
 
     result: np.ndarray = _live_pipeline.predict(features)  # type: ignore[union-attr]
     row = result[0]

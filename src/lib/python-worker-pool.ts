@@ -141,8 +141,8 @@ export class PythonWorkerPool {
 
     const proc = spawn(this.pythonExec, [WORKER_SCRIPT], {
       cwd: path.join(PROJECT_ROOT, "ai"),
-      env: workerEnv,
-      stdio: ["pipe", "pipe", "pipe"],
+      env: workerEnv as NodeJS.ProcessEnv,
+      stdio: "pipe",
     });
 
     const rl = readline.createInterface({ input: proc.stdout!, crlfDelay: Infinity });
