@@ -67,8 +67,9 @@
 ## Fermentation Prediction (/predict)
 
 - Accepts fermentation process parameters as input
-- Calls AI service to generate quality predictions with confidence intervals
-- Falls back to mock predictions when AI service is unavailable
+- Calls the Python worker pool to generate quality predictions with confidence intervals
+- Uses mock predictions by default (MODEL_MODE=mock in ai/.env); set MODEL_MODE=live to use a trained model
+- When all workers are busy, requests are queued; the user sees their queue position and estimated wait time
 - Predictions carry error bands — they are estimates, not guarantees
 - Publicly accessible (no sign-in required)
 - When a signed-in user runs a prediction, the result is silently auto-saved as a batch (no error shown if save fails)
@@ -125,7 +126,8 @@
 **CSV upload:**
 - Upload area on the Batches page accepts a CSV file
 - CSV contains rows of parameters, each with an individual `batch_id`
-- Each row is processed consecutively against the AI service (mocked for now)
+- Each row is processed consecutively through the Python worker pool
+- A queue position indicator shows while the upload slot is waiting for an available worker
 - Results appear in the batch list after processing
 - Maximum 100 rows per upload; validation errors shown inline before submission
 

@@ -9,7 +9,7 @@ Palaka Fermentation — a web application for fermentation quality prediction an
 - **Auth**: BetterAuth (email/password with email verification)
 - **UI**: shadcn/ui + Tailwind CSS 4
 - **Package manager**: pnpm (monorepo)
-- **AI service**: Python service (see `services/ai/`) — mocked when not configured
+- **AI service**: Python worker pool (`ai/`) — long-lived workers via stdin/stdout; `AI_WORKER_COUNT` controls concurrency
 
 ## Monorepo Structure
 
@@ -25,9 +25,8 @@ p-ferm-code/
 │   │   ├── backend/            # Server-side business logic (auth, profile, media, predictions, batches)
 │   │   └── frontend/           # Client-side API wrappers
 │   └── lib/                    # Infrastructure: auth config, Prisma client, email, env
+├── ai/                         # Python worker pool (worker.py, ml/, schemas.py)
 ├── prisma/                     # Schema and migrations
-├── services/
-│   └── ai/                     # Python AI service
 └── packages/
     ├── shared-schemas/         # Zod schemas shared across app and services
     ├── shared-lib/             # Shared utilities (ID generators, etc.)
@@ -47,13 +46,21 @@ p-ferm-code/
    pnpm install
    ```
 
-2. **Configure environment:**
+2. **Set up Python workers:**
    ```bash
-   cp .env.example .env
-   # Edit .env — set DATABASE_URL, BETTER_AUTH_SECRET, and SMTP credentials
+   pnpm setup:ai
+   # Installs numpy, pandas, scikit-learn, joblib in ai/.venv via uv
    ```
 
-3. **Run migrations and seed:**
+3. **Configure environment:**
+   ```bash
+   cp .env.example .env
+   # Edit .env — set DATABASE_URL, BETTER_AUTH_SECRET, SMTP credentials, and AI_WORKER_COUNT
+   cp ai/.env.example ai/.env
+   # ai/.env defaults to MODEL_MODE=mock — no changes needed for local dev
+   ```
+
+4. **Run migrations and seed:**
    ```bash
    pnpm db:migrate
    pnpm db:generate
@@ -62,9 +69,10 @@ p-ferm-code/
 
    The seed script creates a super_admin user using `SEED_ADMIN_EMAIL`, `SEED_ADMIN_PASSWORD`, and `SEED_ADMIN_FIRST_NAME` from `.env`.
 
-4. **Start dev server:**
+5. **Start dev server:**
    ```bash
    pnpm dev
+   # Python workers spawn automatically when the Next.js app starts
    ```
 
 ## Environment Variables
@@ -81,7 +89,7 @@ p-ferm-code/
 | `SMTP_PASSWORD` | SMTP credentials |
 | `EMAIL_FROM` | From address for system emails |
 | `FILE_UPLOADS_PATH` | Local path for uploaded files (e.g., `./uploads`) |
-| `AI_SERVICE_URL` | Python AI service URL — omit to use mock predictions |
+| `AI_WORKER_COUNT` | Number of Python worker processes to spawn (1–5, default 3) |
 | `SEED_ADMIN_EMAIL` | Super admin email (dev only) |
 | `SEED_ADMIN_PASSWORD` | Super admin password (dev only) |
 | `SEED_ADMIN_FIRST_NAME` | Super admin first name (dev only) |
@@ -102,8 +110,21 @@ pnpm db:reset         # Reset and re-run all migrations
 pnpm type-check
 ```
 
-## AI Service (Optional)
+## Python Worker Pool
 
-The AI service lives in `services/ai/`. When `AI_SERVICE_URL` is not set, predictions use a mock implementation.
+Predictions are handled by long-lived Python worker processes in `ai/`. Node spawns them on startup and communicates via stdin/stdout JSON lines.
 
-See `services/ai/.env.example` for service configuration.
+**Scripts:**
+```bash
+pnpm setup:ai    # Install Python deps (run once, or after pyproject.toml changes)
+pnpm dev:ai      # Run a single worker standalone for manual testing
+```
+
+**Configuration** (`ai/.env`, see `ai/.env.example`):
+
+| Variable | Description |
+|---|---|
+| `MODEL_MODE` | `mock` (default) or `live` |
+| `MODEL_PATH` | Path to trained `.joblib` model file (required when `MODEL_MODE=live`) |
+
+Workers spawn automatically when `pnpm dev` starts. `AI_WORKER_COUNT` in root `.env` controls how many workers run concurrently.
