@@ -127,9 +127,21 @@ export class PythonWorkerPool {
   // -------------------------------------------------------------------------
 
   private _spawnWorker(index: number): void {
+    // Least-privilege: only pass env vars the Python worker needs.
+    // Avoids leaking DATABASE_URL, BETTER_AUTH_SECRET, SMTP_PASSWORD, etc.
+    const workerEnv: Record<string, string | undefined> = {
+      PATH: process.env.PATH,
+      HOME: process.env.HOME,
+      LANG: process.env.LANG,
+      MODEL_MODE: process.env.MODEL_MODE,
+      MODEL_PATH: process.env.MODEL_PATH,
+      VIRTUAL_ENV: process.env.VIRTUAL_ENV,
+      PYTHONPATH: process.env.PYTHONPATH,
+    };
+
     const proc = spawn(this.pythonExec, [WORKER_SCRIPT], {
       cwd: path.join(PROJECT_ROOT, "ai"),
-      env: { ...process.env },
+      env: workerEnv,
       stdio: ["pipe", "pipe", "pipe"],
     });
 
