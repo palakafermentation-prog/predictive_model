@@ -4,7 +4,7 @@ import { handleApiError } from "@/lib/api-error";
 import { PredictionRequestSchema } from "@pferm/shared-schemas";
 
 export async function POST(request: Request) {
-  const requestId = crypto.randomUUID();
+  const requestId = request.headers.get("x-request-id") ?? crypto.randomUUID();
   try {
     const body = await request.json();
     const input = PredictionRequestSchema.parse(body);
