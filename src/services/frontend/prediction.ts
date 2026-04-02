@@ -7,10 +7,13 @@ import { apiFetch, isApiError } from "@/lib/api-client";
 
 const baseUrl = NEXT_PUBLIC_API_BASE_URL;
 
-export async function predict(input: PredictionRequest): Promise<PredictionResponse> {
+export async function predict(input: PredictionRequest, requestId?: string): Promise<PredictionResponse> {
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  if (requestId) headers["x-request-id"] = requestId;
+
   const response = await apiFetch<PredictionResponse>(`${baseUrl}/predictions`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers,
     body: JSON.stringify(input),
   });
 

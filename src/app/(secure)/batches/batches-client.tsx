@@ -139,7 +139,7 @@ export function BatchesClient() {
         return;
       }
 
-      const uploadResult = await uploadCsv(result.data.rows);
+      const uploadResult = await uploadCsv(result.data.rows, requestId);
       const newBatches = uploadResult.batches;
 
       if (newBatches.length > 0) {

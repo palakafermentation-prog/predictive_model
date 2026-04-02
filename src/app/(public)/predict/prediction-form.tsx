@@ -77,7 +77,7 @@ export function PredictionForm() {
     setActiveRequestId(requestId);
 
     try {
-      const response = await predict(data);
+      const response = await predict(data, requestId);
       setResult(response);
 
       if (user) {
