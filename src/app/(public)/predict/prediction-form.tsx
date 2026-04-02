@@ -8,11 +8,13 @@ import type { PredictionRequest, PredictionResponse } from "@pferm/shared-schema
 import { predict } from "@/services/frontend/prediction";
 import { saveBatch } from "@/services/frontend/batch";
 import { useSession } from "@/hooks/use-session";
+import { usePredictionQueue } from "@/hooks/use-prediction-queue";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/components/ui/form";
 import { PredictionResults } from "@/components/prediction-results";
+import { QueueStatusDisplay } from "@/components/queue-status";
 
 const INPUT_GROUPS = [
   {
@@ -39,7 +41,7 @@ const INPUT_GROUPS = [
     title: "Fermentation",
     fields: [
       { name: "moromi_duration_days" as const, label: "Moromi Duration", unit: "days", step: 1, defaultValue: 25 },
-      { name: "initial_temperature_c" as const, label: "Initial Temp", unit: "\u00B0C", step: 0.5, defaultValue: 10 },
+      { name: "initial_temperature_c" as const, label: "Initial Temp", unit: "°C", step: 0.5, defaultValue: 10 },
     ],
   },
 ];
@@ -58,6 +60,9 @@ export function PredictionForm() {
   const { user } = useSession();
   const [result, setResult] = useState<PredictionResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [activeRequestId, setActiveRequestId] = useState<string | null>(null);
+
+  const queueStatus = usePredictionQueue(activeRequestId);
 
   const form = useForm<PredictionRequest>({
     resolver: zodResolver(PredictionRequestSchema),
@@ -66,6 +71,11 @@ export function PredictionForm() {
 
   async function onSubmit(data: PredictionRequest) {
     setError(null);
+    setResult(null);
+
+    const requestId = crypto.randomUUID();
+    setActiveRequestId(requestId);
+
     try {
       const response = await predict(data);
       setResult(response);
@@ -84,9 +94,12 @@ export function PredictionForm() {
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong. Please try again.");
-      setResult(null);
+    } finally {
+      setActiveRequestId(null);
     }
   }
+
+  const isSubmitting = form.formState.isSubmitting;
 
   return (
     <div className="space-y-8">
@@ -144,11 +157,16 @@ export function PredictionForm() {
             </div>
           )}
 
-          <Button type="submit" size="lg" className="w-full md:w-auto" disabled={form.formState.isSubmitting}>
-            {form.formState.isSubmitting ? "Running prediction\u2026" : "Run Prediction"}
+          <Button type="submit" size="lg" className="w-full md:w-auto" disabled={isSubmitting}>
+            {isSubmitting ? "Running prediction…" : "Run Prediction"}
           </Button>
         </form>
       </Form>
+
+      {/* Queue status — shown while waiting, hidden once complete */}
+      {isSubmitting && queueStatus && (
+        <QueueStatusDisplay status={queueStatus} />
+      )}
 
       <div aria-live="polite">
         {result && <PredictionResults response={result} />}
