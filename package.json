@@ -16,7 +16,9 @@
     "db:studio": "prisma studio",
     "db:push": "prisma db push",
     "db:reset": "prisma migrate reset",
-    "db:seed": "tsx prisma/seed.ts"
+    "db:seed": "tsx prisma/seed.ts",
+    "setup:ai": "cd ai && uv sync",
+    "dev:ai": "cd ai && .venv/bin/python worker.py"
   },
   "dependencies": {
     "@hookform/resolvers": "5.2.2",

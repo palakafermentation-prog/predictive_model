@@ -8,7 +8,7 @@ export async function POST(request: Request) {
   try {
     const body = await request.json();
     const input = PredictionRequestSchema.parse(body);
-    const result = await predict(input);
+    const result = await predict(input, requestId);
 
     return NextResponse.json({ data: result, requestId });
   } catch (error) {

@@ -126,7 +126,7 @@ export async function processCsvUpload(user: UserSession, rows: PredictionReques
     const row = rows[i];
     try {
       const { batch_id, ...parameters } = row;
-      const response = await predict(row);
+      const response = await predict(row, crypto.randomUUID());
       const batch = await saveBatch(user, {
         batchId: batch_id,
         parameters,

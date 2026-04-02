@@ -35,7 +35,7 @@ let MEDIA_MAX_WIDTH: string | undefined;
 let MEDIA_MAX_HEIGHT: string | undefined;
 let MEDIA_QUALITY: string | undefined;
 let MEDIA_CACHE_MAX_AGE: string | undefined;
-let AI_SERVICE_URL: string | undefined;
+let AI_WORKER_COUNT: string | undefined;
 
 if (isServer) {
   DATABASE_URL = required("DATABASE_URL");
@@ -53,7 +53,7 @@ if (isServer) {
   MEDIA_QUALITY = required("MEDIA_QUALITY");
   MEDIA_CACHE_MAX_AGE = required("MEDIA_CACHE_MAX_AGE");
 
-  AI_SERVICE_URL = process.env.AI_SERVICE_URL;
+  AI_WORKER_COUNT = process.env.AI_WORKER_COUNT;
 
   NODE_ENV = process.env.NODE_ENV;
 
@@ -80,7 +80,7 @@ export {
   SMTP_PASSWORD,
   EMAIL_FROM,
   FILE_UPLOADS_PATH,
-  AI_SERVICE_URL,
+  AI_WORKER_COUNT,
 };
 
 export const IS_PRODUCTION = NODE_ENV === "production";

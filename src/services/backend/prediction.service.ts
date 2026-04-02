@@ -1,15 +1,8 @@
 import { PredictionRequestSchema } from "@pferm/shared-schemas";
 import type { PredictionRequest, PredictionResponse } from "@pferm/shared-schemas";
-import { callAiService } from "@/lib/ai-client";
-import { generateMockPrediction } from "./prediction-mock";
+import { dispatchAiRequest } from "@/lib/ai-client";
 
-export async function predict(input: PredictionRequest): Promise<PredictionResponse> {
+export async function predict(input: PredictionRequest, requestId: string): Promise<PredictionResponse> {
   const validated = PredictionRequestSchema.parse(input);
-  const mockResponse = generateMockPrediction(validated);
-
-  return callAiService<PredictionResponse>(
-    "/api/v1/predict",
-    validated,
-    mockResponse,
-  );
+  return dispatchAiRequest(requestId, validated);
 }
