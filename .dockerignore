@@ -1,0 +1,17 @@
+**/node_modules
+**/.next
+**/.git
+**/.gitignore
+**/.env
+**/.env.*
+**/dist
+**/README.md
+**/docker
+!docker/web/entrypoint.sh
+**/.dockerignore
+**/npm-debug.log
+**/.turbo
+**/coverage
+**/.playwright
+**/.venv
+**/__pycache__

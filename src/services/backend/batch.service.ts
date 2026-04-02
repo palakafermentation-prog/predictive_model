@@ -118,7 +118,11 @@ export interface CsvUploadResult {
  * Process CSV upload: run each row through predict, then save as a batch.
  * Continues on per-row failures and reports partial results.
  */
-export async function processCsvUpload(user: UserSession, rows: PredictionRequest[]): Promise<CsvUploadResult> {
+export async function processCsvUpload(
+  user: UserSession,
+  rows: PredictionRequest[],
+  onProgress?: (processed: number, total: number) => void,
+): Promise<CsvUploadResult> {
   const saved: CsvUploadResult["saved"] = [];
   const errors: CsvRowError[] = [];
 
@@ -126,7 +130,7 @@ export async function processCsvUpload(user: UserSession, rows: PredictionReques
     const row = rows[i];
     try {
       const { batch_id, ...parameters } = row;
-      const response = await predict(row);
+      const response = await predict(row, crypto.randomUUID());
       const batch = await saveBatch(user, {
         batchId: batch_id,
         parameters,
@@ -137,7 +141,9 @@ export async function processCsvUpload(user: UserSession, rows: PredictionReques
         schemaVersion: response.schema_version,
       });
       saved.push(batch);
+      onProgress?.(i + 1, rows.length);
     } catch (error) {
+      onProgress?.(i + 1, rows.length);
       errors.push({
         row: i + 1,
         batchId: row.batch_id,

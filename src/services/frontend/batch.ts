@@ -57,10 +57,13 @@ export interface CsvUploadResult {
   errors: CsvUploadRowError[];
 }
 
-export async function uploadCsv(rows: CsvUploadRequest["rows"]): Promise<CsvUploadResult> {
+export async function uploadCsv(rows: CsvUploadRequest["rows"], requestId?: string): Promise<CsvUploadResult> {
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  if (requestId) headers["x-request-id"] = requestId;
+
   const response = await apiFetch<CsvUploadResult>(`${baseUrl}/batches/csv`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers,
     body: JSON.stringify({ rows }),
   });
   if (isApiError(response)) throw new Error(response.error.message);

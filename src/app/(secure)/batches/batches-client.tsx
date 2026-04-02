@@ -4,6 +4,8 @@ import * as React from "react";
 import { useSession } from "@/hooks/use-session";
 import { useDrawerStore } from "@/stores/drawer-store";
 import { getBatches, uploadCsv } from "@/services/frontend/batch";
+import { usePredictionQueue } from "@/hooks/use-prediction-queue";
+import { QueueStatusDisplay } from "@/components/queue-status";
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import {
@@ -78,9 +80,13 @@ export function BatchesClient() {
   const [fetchError, setFetchError] = React.useState<string | null>(null);
 
   const [csvFile, setCsvFile] = React.useState<File | null>(null);
-  const [csvErrors, setCsvErrors] = React.useState<string[]>([]);
+  const [csvErrorFileName, setCsvErrorFileName] = React.useState<string | null>(null);
+  const [csvErrors, setCsvErrors] = React.useState<{ rowNumber: number; errors: string[] }[]>([]);
   const [isUploading, setIsUploading] = React.useState(false);
+  const [activeRequestId, setActiveRequestId] = React.useState<string | null>(null);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
+
+  const queueStatus = usePredictionQueue(activeRequestId);
 
   React.useEffect(() => {
     if (!user) return;
@@ -94,12 +100,16 @@ export function BatchesClient() {
     if (!file) return;
     setCsvFile(file);
     setCsvErrors([]);
+    setCsvErrorFileName(null);
   }
 
   async function handleCsvUpload() {
     if (!csvFile) return;
     setCsvErrors([]);
+    setCsvErrorFileName(csvFile.name);
     setIsUploading(true);
+    const requestId = crypto.randomUUID();
+    setActiveRequestId(requestId);
 
     try {
       const text = await csvFile.text();
@@ -108,14 +118,28 @@ export function BatchesClient() {
       // Validate before sending
       const result = CsvUploadRequestSchema.safeParse({ rows });
       if (!result.success) {
-        const msgs = result.error.issues.map((i) => i.message);
-        setCsvErrors(msgs);
+        // Group Zod errors by row: path is ["rows", rowIndex, fieldName]
+        const rowMap = new Map<number, string[]>();
+        for (const issue of result.error.issues) {
+          const rawIdx = issue.path[1];
+          const rowIdx = typeof rawIdx === "number" ? rawIdx : -1;
+          const field = issue.path[2] as string | undefined;
+          const label = field ? `${field}: ${issue.message}` : issue.message;
+          const arr = rowMap.get(rowIdx) ?? [];
+          arr.push(label);
+          rowMap.set(rowIdx, arr);
+        }
+        setCsvErrors(
+          Array.from(rowMap.entries())
+            .sort(([a], [b]) => a - b)
+            .map(([idx, errs]) => ({ rowNumber: idx >= 0 ? idx + 2 : -1, errors: errs }))
+        );
         setCsvFile(null);
         if (fileInputRef.current) fileInputRef.current.value = "";
         return;
       }
 
-      const uploadResult = await uploadCsv(result.data.rows);
+      const uploadResult = await uploadCsv(result.data.rows, requestId);
       const newBatches = uploadResult.batches;
 
       if (newBatches.length > 0) {
@@ -133,23 +157,28 @@ export function BatchesClient() {
       }
 
       if (uploadResult.errors.length > 0) {
-        const errorMsgs = uploadResult.errors.map(
-          (e) => `Row ${e.row} (${e.batchId}): ${e.message}`
-        );
+        const serverErrors = uploadResult.errors.map((e) => ({
+          rowNumber: e.row + 1,
+          errors: [`${e.batchId}: ${e.message}`],
+        }));
         if (newBatches.length > 0) {
-          errorMsgs.unshift(`${newBatches.length} of ${rows.length} batches processed successfully.`);
+          serverErrors.unshift({
+            rowNumber: -1,
+            errors: [`${newBatches.length} of ${rows.length} batches processed successfully.`],
+          });
         }
-        setCsvErrors(errorMsgs);
+        setCsvErrors(serverErrors);
       }
 
       setCsvFile(null);
       if (fileInputRef.current) fileInputRef.current.value = "";
     } catch (err) {
-      setCsvErrors([err instanceof Error ? err.message : "Something went wrong. Please try again."]);
+      setCsvErrors([{ rowNumber: -1, errors: [err instanceof Error ? err.message : "Something went wrong. Please try again."] }]);
       setCsvFile(null);
       if (fileInputRef.current) fileInputRef.current.value = "";
     } finally {
       setIsUploading(false);
+      setActiveRequestId(null);
     }
   }
 
@@ -217,22 +246,39 @@ export function BatchesClient() {
                 )}
               </div>
 
-              {csvErrors.length > 0 && (
-                <div role="alert" className="space-y-1">
-                  <ul className="space-y-1">
-                    {csvErrors.map((err, i) => (
-                      <li key={i} className="text-sm text-destructive">
-                        {err}
-                      </li>
-                    ))}
-                  </ul>
-                  <p className="text-xs text-muted-foreground">
-                    Fix the file and choose it again to retry.
-                  </p>
-                </div>
+              {/* Queue/progress status during upload */}
+              {isUploading && queueStatus && (
+                <QueueStatusDisplay status={queueStatus} />
               )}
             </div>
           </div>
+
+          {csvErrors.length > 0 && (
+            <div role="alert" className="rounded-md border border-destructive/30 bg-destructive/5 px-4 py-3 space-y-3">
+              <div>
+                <p className="text-sm font-medium text-destructive">
+                  Validation errors{csvErrorFileName && <span className="font-normal text-muted-foreground"> &mdash; {csvErrorFileName}</span>}
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  Fix the file and choose it again to retry.
+                </p>
+              </div>
+              <div className="space-y-1.5">
+                {csvErrors.map((row, i) => (
+                  <div key={i} className="flex gap-3 text-sm">
+                    {row.rowNumber >= 0 && (
+                      <span className="shrink-0 font-medium text-destructive whitespace-nowrap">
+                        Row {row.rowNumber}
+                      </span>
+                    )}
+                    <span className="text-destructive font-mono">
+                      {row.errors.join(" · ")}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         {fetchError && (

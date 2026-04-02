@@ -14,7 +14,7 @@
 | State | Zustand (client stores) |
 | Email | Nodemailer |
 | File processing | sharp |
-| AI service | Python (Hono-based HTTP service) |
+| AI service | Python (stdin/stdout worker pool, `ai/`) |
 | Package manager | pnpm (monorepo with Turborepo) |
 
 ## Application Structure
@@ -33,9 +33,9 @@ flowchart TD
             Open["(open) — unauthenticated app"]
             Secure["(secure) — authenticated app"]
         end
-        API[API Routes\n/api/auth/*\n/api/profile\n/api/media/*\n/api/predictions\n/api/batches/*\n/api/health]
+        API[API Routes\n/api/auth/*\n/api/profile\n/api/media/*\n/api/predictions\n/api/batches/*\n/api/queue/status\n/api/health]
         BE[services/backend]
-        Lib[lib/\nauth · prisma · email · env]
+        Lib[lib/\nauth · prisma · email · env · worker-pool]
     end
 
     subgraph Data
@@ -43,13 +43,13 @@ flowchart TD
         FS[File System\nuploads/]
     end
 
-    AI[AI Service\nservices/ai/]
+    PY[Python Workers\nai/worker.py × N]
 
     UI --> FE --> API
     API --> BE --> Lib
     Lib --> PG
     Lib --> FS
-    API --> AI
+    Lib --> PY
 ```
 
 ## Authentication Architecture
@@ -176,9 +176,11 @@ All business logic lives in `src/services/`. API routes call services; services 
 | `auth.service.ts` | `services/backend/` | signup, signin, signout, session, verify email, resend, forgot/reset password |
 | `profile.service.ts` | `services/backend/` | Get and update user profile |
 | `media.service.ts` | `services/backend/` | Upload, retrieve, delete media files |
-| `prediction.service.ts` | `services/backend/` | Call AI service (or mock) for fermentation predictions |
+| `prediction.service.ts` | `services/backend/` | Dispatch prediction requests to the Python worker pool |
 | `batch.service.ts` | `services/backend/` | Batch CRUD, upsert, and CSV upload processing |
 | `db.service.ts` | `services/backend/` | Shared DB query helpers |
+| `python-worker-pool.ts` | `lib/` | Spawn and manage Python worker processes; FIFO queue, auto-respawn |
+| `csv-progress-tracker.ts` | `lib/` | Track per-upload row progress for CSV batch processing |
 | `permissions.ts` | `services/backend/` | `requireSuperAdmin()` and `requireOwner()` guards |
 | `auth.ts` | `services/frontend/` | Client-side auth API calls |
 | `media.ts` | `services/frontend/` | Client-side media upload/fetch |
@@ -201,11 +203,39 @@ All business logic lives in `src/services/`. API routes call services; services 
 | `(open)` | None | Public app pages — `/predict` and `/batches` |
 | `(secure)` | Required | Authenticated app — redirects to `/sign-in` via `SecureLayout` |
 
-## AI Service
+## Python Worker Pool
 
-`services/ai/` is an independent Python HTTP service. The Next.js app calls it via `lib/ai-client.ts`.
+`ai/` contains long-lived Python worker processes. Node spawns them on startup and communicates via stdin/stdout JSON lines — no HTTP, no extra ports.
 
-- When `AI_SERVICE_URL` env var is set: requests are proxied to the AI service
-- When `AI_SERVICE_URL` is not set: `prediction-mock.ts` generates synthetic responses
+```
+flowchart TD
+    subgraph NextJS["Next.js (Node)"]
+        AIC[ai-client.ts]
+        Pool[python-worker-pool.ts\nFIFO queue · auto-respawn]
+    end
 
-See `services/ai/.env.example` for service configuration.
+    subgraph Python["Python Workers (ai/)"]
+        W1[worker.py #1]
+        W2[worker.py #2]
+        Wn[worker.py #N]
+    end
+
+    AIC --> Pool
+    Pool -->|stdin/stdout JSON| W1
+    Pool -->|stdin/stdout JSON| W2
+    Pool -->|stdin/stdout JSON| Wn
+```
+
+**Key properties:**
+- Workers are long-lived — spawn once on Node startup, auto-respawn on crash
+- Concurrency controlled by `AI_WORKER_COUNT` (default 3, range 1–5)
+- Requests that exceed worker capacity are queued in FIFO order; frontend polls `/api/queue/status` for position
+- Mock vs. live model toggled by `MODEL_MODE` in `ai/.env` — no code changes needed
+
+**Setup:**
+```bash
+pnpm setup:ai    # Installs Python deps in ai/.venv via uv (numpy, pandas, scikit-learn, joblib)
+pnpm dev:ai      # Run a single worker standalone for manual testing
+```
+
+See `ai/.env.example` for Python-side configuration.
