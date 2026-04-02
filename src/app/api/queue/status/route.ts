@@ -32,6 +32,11 @@ export async function GET(request: Request) {
     // Check CSV progress first (CSV uploads are tracked here, not in the pool)
     const csv = csvProgress.get(id);
     if (csv) {
+      if (csv.completedAt) {
+        return NextResponse.json({
+          data: { position: 0, estimatedWaitMs: 0, complete: true },
+        });
+      }
       return NextResponse.json({
         data: {
           position: 0,
@@ -46,7 +51,7 @@ export async function GET(request: Request) {
     const status = pythonWorkerPool.getQueueStatus(id);
     if (!status) {
       return NextResponse.json(
-        { error: { code: "NOT_FOUND", message: "Request not found or already completed" } },
+        { error: { code: "NOT_FOUND", message: "Request not found" } },
         { status: 404 }
       );
     }
