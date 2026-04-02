@@ -1,17 +1,20 @@
 import { NextResponse } from "next/server";
 import { pythonWorkerPool } from "@/lib/python-worker-pool";
+import * as csvProgress from "@/lib/csv-progress-tracker";
 
 /**
  * GET /api/queue/status?id=<requestId>
  *
- * Returns the queue position and estimated wait time for a pending request.
- * Used by the frontend to display queue progress while a prediction is being processed.
+ * Returns queue position and progress for a pending request.
  *
- * Response:
- *   200 { position: number; estimatedWaitMs: number }
- *     position = 0  → request is currently being processed
- *     position >= 1 → request is queued at this 1-based position
- *   404             → requestId not found (completed, expired, or never existed)
+ * For predictions:
+ *   { position: 0, estimatedWaitMs: 0 }           → being processed
+ *   { position: N, estimatedWaitMs: N }            → queued
+ *
+ * For CSV uploads:
+ *   { position: 0, estimatedWaitMs: 0, processedRows: N, totalRows: M } → in progress
+ *
+ * 404 → requestId not found (completed, expired, or never existed)
  */
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -24,8 +27,21 @@ export async function GET(request: Request) {
     );
   }
 
-  const status = pythonWorkerPool.getQueueStatus(id);
+  // Check CSV progress first (CSV uploads are tracked here, not in the pool)
+  const csv = csvProgress.get(id);
+  if (csv) {
+    return NextResponse.json({
+      data: {
+        position: 0,
+        estimatedWaitMs: 0,
+        processedRows: csv.processedRows,
+        totalRows: csv.totalRows,
+      },
+    });
+  }
 
+  // Check worker pool queue (single predictions)
+  const status = pythonWorkerPool.getQueueStatus(id);
   if (!status) {
     return NextResponse.json(
       { error: { code: "NOT_FOUND", message: "Request not found or already completed" } },
