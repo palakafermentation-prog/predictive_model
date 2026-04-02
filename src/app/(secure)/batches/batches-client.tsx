@@ -4,6 +4,8 @@ import * as React from "react";
 import { useSession } from "@/hooks/use-session";
 import { useDrawerStore } from "@/stores/drawer-store";
 import { getBatches, uploadCsv } from "@/services/frontend/batch";
+import { usePredictionQueue } from "@/hooks/use-prediction-queue";
+import { QueueStatusDisplay } from "@/components/queue-status";
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import {
@@ -81,7 +83,10 @@ export function BatchesClient() {
   const [csvErrorFileName, setCsvErrorFileName] = React.useState<string | null>(null);
   const [csvErrors, setCsvErrors] = React.useState<{ rowNumber: number; errors: string[] }[]>([]);
   const [isUploading, setIsUploading] = React.useState(false);
+  const [activeRequestId, setActiveRequestId] = React.useState<string | null>(null);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
+
+  const queueStatus = usePredictionQueue(activeRequestId);
 
   React.useEffect(() => {
     if (!user) return;
@@ -103,6 +108,8 @@ export function BatchesClient() {
     setCsvErrors([]);
     setCsvErrorFileName(csvFile.name);
     setIsUploading(true);
+    const requestId = crypto.randomUUID();
+    setActiveRequestId(requestId);
 
     try {
       const text = await csvFile.text();
@@ -171,6 +178,7 @@ export function BatchesClient() {
       if (fileInputRef.current) fileInputRef.current.value = "";
     } finally {
       setIsUploading(false);
+      setActiveRequestId(null);
     }
   }
 
@@ -238,6 +246,10 @@ export function BatchesClient() {
                 )}
               </div>
 
+              {/* Queue/progress status during upload */}
+              {isUploading && queueStatus && (
+                <QueueStatusDisplay status={queueStatus} />
+              )}
             </div>
           </div>
 
