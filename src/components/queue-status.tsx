@@ -27,7 +27,7 @@ export function QueueStatusDisplay({ status }: QueueStatusProps) {
       aria-atomic="true"
       className="flex flex-col items-center gap-3 py-4 text-center"
     >
-      <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" aria-hidden="true" />
+      <Loader2 className="h-6 w-6 animate-spin motion-reduce:animate-none text-muted-foreground" aria-hidden="true" />
 
       {isCsvProgress ? (
         // CSV upload row progress
