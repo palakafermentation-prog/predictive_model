@@ -39,10 +39,25 @@ export default function BatchDetailDrawerContent({ id }: BatchDetailDrawerConten
 
   if (!batch) {
     return (
-      <div className="space-y-4">
-        <div className="h-6 w-32 bg-muted rounded animate-pulse motion-reduce:animate-none" />
-        <div className="h-40 bg-muted rounded animate-pulse motion-reduce:animate-none" />
-        <div className="h-40 bg-muted rounded animate-pulse motion-reduce:animate-none" />
+      <div
+        role="status"
+        aria-busy="true"
+        aria-live="polite"
+        className="space-y-4"
+      >
+        <span className="sr-only">Loading batch details…</span>
+        <div
+          aria-hidden="true"
+          className="h-6 w-32 bg-muted rounded animate-pulse motion-reduce:animate-none"
+        />
+        <div
+          aria-hidden="true"
+          className="h-40 bg-muted rounded animate-pulse motion-reduce:animate-none"
+        />
+        <div
+          aria-hidden="true"
+          className="h-40 bg-muted rounded animate-pulse motion-reduce:animate-none"
+        />
       </div>
     );
   }
@@ -82,7 +97,7 @@ export default function BatchDetailDrawerContent({ id }: BatchDetailDrawerConten
       </div>
 
       <div className="border-t pt-6">
-        <PredictionResults response={predictionResponse} />
+        <PredictionResults response={predictionResponse} headingLevel="h3" />
       </div>
     </div>
   );

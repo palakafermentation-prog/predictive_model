@@ -7,6 +7,12 @@ import { QcStatusBanner } from "@/components/ui/qc-status-banner";
 
 interface PredictionResultsProps {
   response: PredictionResponse;
+  /**
+   * Heading level for the "Results" title. Defaults to "h2" for standalone page
+   * use. Pass "h3" when nested inside a container that already provides an h2
+   * (e.g. the drawer's SheetTitle) so heading hierarchy stays valid.
+   */
+  headingLevel?: "h2" | "h3";
 }
 
 const MEDIATOR_FIELDS = [
@@ -19,13 +25,14 @@ const PROBABILITY_FIELDS = [
   { key: "predicted_off_flavor_probability", label: "Off-Flavor" },
 ] as const;
 
-export function PredictionResults({ response }: PredictionResultsProps) {
+export function PredictionResults({ response, headingLevel = "h2" }: PredictionResultsProps) {
   const { predictions, qc_status, qc_flags, warnings, batch_id, model_version, schema_version } = response;
+  const HeadingTag = headingLevel;
 
   return (
     <div className="space-y-6">
       <div className="flex items-baseline justify-between">
-        <h2 className="text-xl font-semibold tracking-tight">Results</h2>
+        <HeadingTag className="text-xl font-semibold tracking-tight">Results</HeadingTag>
         <span className="text-sm text-muted-foreground font-mono">Batch: {batch_id}</span>
       </div>
 

@@ -30,8 +30,14 @@ const widthClasses = {
 
 function DrawerContentSkeleton() {
   return (
-    <div className="space-y-4">
-      <div className="space-y-2">
+    <div
+      role="status"
+      aria-busy="true"
+      aria-live="polite"
+      className="space-y-4"
+    >
+      <span className="sr-only">Loading…</span>
+      <div className="space-y-2" aria-hidden="true">
         <div className="h-10 bg-muted rounded animate-pulse motion-reduce:animate-none" />
         <div className="h-10 bg-muted rounded animate-pulse motion-reduce:animate-none" />
         <div className="h-10 bg-muted rounded animate-pulse motion-reduce:animate-none" />

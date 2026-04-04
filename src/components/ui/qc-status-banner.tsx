@@ -7,9 +7,9 @@ interface QcStatusBannerProps {
   qcFlags: string[];
 }
 
-const QC_STATUS_LABELS: Record<string, string> = {
-  pass: "✅ Optimal Spec",
-  review: "⚠️ Needs Review",
+const QC_STATUS_LABELS: Record<string, { icon: string; text: string }> = {
+  pass: { icon: "✅", text: "Optimal Spec" },
+  review: { icon: "⚠️", text: "Needs Review" },
 };
 
 const QC_FLAG_LABELS: Record<string, string> = {
@@ -37,6 +37,7 @@ const severityStyles = {
 
 export function QcStatusBanner({ qcStatus, qcFlags }: QcStatusBannerProps) {
   const severity = getSeverity(qcStatus);
+  const label = QC_STATUS_LABELS[qcStatus];
 
   return (
     <div className="space-y-2" role="status">
@@ -46,13 +47,19 @@ export function QcStatusBanner({ qcStatus, qcFlags }: QcStatusBannerProps) {
           severityStyles[severity],
         )}
       >
-        {QC_STATUS_LABELS[qcStatus] ?? qcStatus}
+        {label ? (
+          <>
+            <span aria-hidden="true">{label.icon}</span> {label.text}
+          </>
+        ) : (
+          qcStatus
+        )}
       </div>
       {qcFlags.length > 0 && (
-        <div className="space-y-1">
-          {qcFlags.map((flag, i) => (
-            <div
-              key={i}
+        <ul className="space-y-1 list-none p-0">
+          {qcFlags.map((flag) => (
+            <li
+              key={flag}
               className={cn(
                 "rounded-md px-3 py-2 text-sm",
                 severityStyles[severity],
@@ -60,9 +67,9 @@ export function QcStatusBanner({ qcStatus, qcFlags }: QcStatusBannerProps) {
               )}
             >
               {QC_FLAG_LABELS[flag] ?? flag}
-            </div>
+            </li>
           ))}
-        </div>
+        </ul>
       )}
     </div>
   );
