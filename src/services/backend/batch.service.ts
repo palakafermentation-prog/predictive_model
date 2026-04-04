@@ -3,7 +3,27 @@ import { NotFoundError } from "@/lib/errors";
 import { generateBatchId } from "./db.service";
 import { predict } from "./prediction.service";
 import type { UserSession } from "./permissions";
-import type { BatchSaveRequest, PredictionRequest } from "@pferm/shared-schemas";
+import type { BatchSaveRequest, PredictionPredictions, PredictionRequest } from "@pferm/shared-schemas";
+
+/**
+ * Normalize legacy prediction shapes from the DB to the current PredictionPredictions format.
+ * Handles records saved before v0.2 schema where prediction_error_band was a plain float.
+ */
+function normalizeLegacyPredictions(raw: unknown): PredictionPredictions {
+  const p = raw as Record<string, unknown>;
+  const errorBand = p.prediction_error_band;
+  return {
+    predicted_quality_score: p.predicted_quality_score as number,
+    prediction_error_band:
+      typeof errorBand === "number"
+        ? { quality_score_1to5: errorBand, method: "legacy" }
+        : (errorBand as PredictionPredictions["prediction_error_band"]),
+    estimated_final_brix: p.estimated_final_brix as number,
+    estimated_final_acidity: (p.estimated_final_acidity ?? null) as number | null,
+    estimated_amino_acidity: p.estimated_amino_acidity as number,
+    predicted_off_flavor_probability: p.predicted_off_flavor_probability as number,
+  };
+}
 
 const batchListSelect = {
   id: true,
@@ -66,7 +86,7 @@ export async function getBatch(user: UserSession, id: string) {
   }
 
   const { userId: _, ...rest } = batch;
-  return rest;
+  return { ...rest, predictions: normalizeLegacyPredictions(rest.predictions) };
 }
 
 /**
