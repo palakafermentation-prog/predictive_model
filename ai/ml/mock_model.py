@@ -8,7 +8,7 @@ Used when MODEL_MODE=mock (default).
 import ctypes
 import math
 
-from schemas import PredictionPredictions, PredictionRequest, PredictionResponse
+from schemas import PredictionErrorBand, PredictionPredictions, PredictionRequest, PredictionResponse
 
 
 def _hash_code(s: str) -> int:
@@ -48,50 +48,41 @@ def generate_mock_prediction(request: PredictionRequest) -> PredictionResponse:
     # predicted_quality_score: 1–5 scale
     base_quality = 1 + polish_factor * 1.5 + max(0.0, temp_factor) * 0.75 + max(0.0, duration_factor) * 0.75
     predicted_quality_score = round(min(5.0, max(1.0, base_quality + rand(0) * 0.5 - 0.25)), 2)
-    prediction_error_band = round(0.1 + rand(1) * 0.3, 2)
 
     estimated_final_brix = round(4 + rand(2) * 6, 2)       # 4–10 °Bx
     estimated_final_acidity = round(1.0 + rand(3) * 1.5, 2)  # 1.0–2.5
     estimated_amino_acidity = round(0.5 + rand(4) * 1.0, 2)  # 0.5–1.5
-    predicted_texture_astringency = round(1.0 + rand(5) * 3.0, 2)        # 1–4
-    predicted_alcohol_burn_intensity = round(1.0 + rand(6) * 3.0, 2)     # 1–4
-    predicted_floral_probability = round(rand(7), 2)
     predicted_off_flavor_probability = round(rand(8) * 0.4, 2)
 
-    # Determine QC status based on quality and off-flavor risk
+    # Determine QC status and flags (machine-readable, same as live mode)
     qc_flags: list[str] = []
 
     if predicted_off_flavor_probability > 0.3:
-        qc_status = "🚨 High off-flavor risk"
-        qc_flags.append(
-            f"Off-flavor probability {predicted_off_flavor_probability * 100:.0f}% exceeds threshold"
-        )
-    elif predicted_quality_score < 2.5 or request.koji_incubation_hours > 50:
-        qc_status = "⚠️ Warning"
-        if predicted_quality_score < 2.5:
-            qc_flags.append("Quality score below target range")
+        qc_flags.append("high_off_flavor_probability")
+    if predicted_quality_score < 2.5 or request.koji_incubation_hours > 50:
         if request.koji_incubation_hours > 50:
-            qc_flags.append("Koji incubation hours near upper limit — risk of over-saccharification")
-        if estimated_final_brix > 9:
-            qc_flags.append("Elevated Brix — potential sweetness imbalance")
-    else:
-        qc_status = "✅ Optimal Spec"
+            qc_flags.append("high_acidity_risk")
+    if estimated_final_brix > 9:
+        qc_flags.append("elevated_brix")
+
+    qc_status = "pass" if not qc_flags else "review"
 
     return PredictionResponse(
         batch_id=request.batch_id,
         predictions=PredictionPredictions(
             predicted_quality_score=predicted_quality_score,
-            prediction_error_band=prediction_error_band,
+            prediction_error_band=PredictionErrorBand(
+                quality_score_1to5=round(0.1 + rand(1) * 0.3, 2),
+                method="mock",
+            ),
             estimated_final_brix=estimated_final_brix,
             estimated_final_acidity=estimated_final_acidity,
             estimated_amino_acidity=estimated_amino_acidity,
-            predicted_texture_astringency=predicted_texture_astringency,
-            predicted_alcohol_burn_intensity=predicted_alcohol_burn_intensity,
-            predicted_floral_probability=predicted_floral_probability,
             predicted_off_flavor_probability=predicted_off_flavor_probability,
         ),
         qc_status=qc_status,
         qc_flags=qc_flags,
+        warnings=[],
         model_version="mock-1.0",
         schema_version="v0.2",
     )
