@@ -155,7 +155,8 @@ export class PythonWorkerPool {
       HOME: process.env.HOME,
       LANG: process.env.LANG,
       MODEL_MODE: process.env.MODEL_MODE,
-      MODEL_PATH: process.env.MODEL_PATH,
+      MODEL_DIR: process.env.MODEL_DIR,
+      MODEL_DIR_ALLOW_EXTERNAL: process.env.MODEL_DIR_ALLOW_EXTERNAL,
       VIRTUAL_ENV: process.env.VIRTUAL_ENV,
       PYTHONPATH: process.env.PYTHONPATH,
     };

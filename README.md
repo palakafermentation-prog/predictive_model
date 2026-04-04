@@ -125,6 +125,7 @@ pnpm dev:ai      # Run a single worker standalone for manual testing
 | Variable | Description |
 |---|---|
 | `MODEL_MODE` | `mock` (default) or `live` |
-| `MODEL_PATH` | Path to trained `.joblib` model file (required when `MODEL_MODE=live`) |
+| `MODEL_DIR` | Directory containing trained model artifacts (optional; defaults to `ai/ml/models/trained/`). Must resolve under the `ai/` workspace unless `MODEL_DIR_ALLOW_EXTERNAL=1`. |
+| `MODEL_DIR_ALLOW_EXTERNAL` | Set to `1` to allow `MODEL_DIR` to resolve outside the `ai/` workspace. Use only for vetted deployment paths — joblib deserialization is pickle-based and trusts the directory contents. |
 
 Workers spawn automatically when `pnpm dev` starts. `AI_WORKER_COUNT` in root `.env` controls how many workers run concurrently.
