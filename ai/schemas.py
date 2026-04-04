@@ -3,6 +3,8 @@ Pydantic schemas matching the v0.2 prediction schema (packages/shared-schemas/sr
 Field names and validation constraints mirror the Zod schema exactly.
 """
 
+from typing import Optional
+
 from pydantic import BaseModel, Field
 
 
@@ -17,15 +19,25 @@ class PredictionRequest(BaseModel):
     yeast_pitch_rate_cells_ml: float = Field(gt=0)
 
 
+class PredictionErrorBand(BaseModel):
+    quality_score_1to5: float
+    method: str
+
+
+class PredictionMetadata(BaseModel):
+    model_version: Optional[str] = None
+    last_trained_date: Optional[str] = None
+    schema_version: str = "v0.2"
+    units: Optional[dict[str, str]] = None
+    qc_thresholds_used: Optional[dict[str, str]] = None
+
+
 class PredictionPredictions(BaseModel):
     predicted_quality_score: float
-    prediction_error_band: float
+    prediction_error_band: PredictionErrorBand
     estimated_final_brix: float
-    estimated_final_acidity: float
+    estimated_final_acidity: Optional[float]
     estimated_amino_acidity: float
-    predicted_texture_astringency: float
-    predicted_alcohol_burn_intensity: float
-    predicted_floral_probability: float
     predicted_off_flavor_probability: float
 
 
@@ -34,8 +46,10 @@ class PredictionResponse(BaseModel):
     predictions: PredictionPredictions
     qc_status: str
     qc_flags: list[str]
-    model_version: str | None = None
-    schema_version: str | None = None
+    warnings: list[str] = []
+    model_version: Optional[str] = None
+    schema_version: Optional[str] = None
+    metadata: Optional[PredictionMetadata] = None
 
 
 class PredictionError(BaseModel):
