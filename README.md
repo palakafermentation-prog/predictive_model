@@ -125,7 +125,18 @@ pnpm dev:ai      # Run a single worker standalone for manual testing
 | Variable | Description |
 |---|---|
 | `MODEL_MODE` | `mock` (default) or `live` |
-| `MODEL_DIR` | Directory containing trained model artifacts (optional; defaults to `ai/ml/models/trained/`). Must resolve under the `ai/` workspace unless `MODEL_DIR_ALLOW_EXTERNAL=1`. |
-| `MODEL_DIR_ALLOW_EXTERNAL` | Set to `1` to allow `MODEL_DIR` to resolve outside the `ai/` workspace. Use only for vetted deployment paths — joblib deserialization is pickle-based and trusts the directory contents. |
+| `MODEL_DIR` | Path to trained model artifacts (required for `MODEL_MODE=live`, default: `ai/ml/models/trained`) |
+| `MODEL_DIR_ALLOW_EXTERNAL` | Set to `1` to allow `MODEL_DIR` outside the `ai/` workspace (production deployments) |
 
 Workers spawn automatically when `pnpm dev` starts. `AI_WORKER_COUNT` in root `.env` controls how many workers run concurrently.
+
+### Updating the vendored ML model
+
+`ai/palaka_model/` is a drop-in copy of the external ML team's Python package and `ai/ml/models/trained/` holds the trained model artifacts. When the ML team ships an update:
+
+```bash
+rm -rf ai/palaka_model && cp -r <ml-repo>/palaka_model ai/palaka_model
+cp <ml-repo>/artifacts/*.joblib <ml-repo>/artifacts/model_registry.json ai/ml/models/trained/
+```
+
+No code edits required — the layout mirrors upstream byte-for-byte.
