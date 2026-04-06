@@ -19,12 +19,19 @@ transporter.verify().then(() => {
 });
 
 async function sendEmail(to: string, subject: string, html: string): Promise<void> {
-  await transporter.sendMail({
-    from: EMAIL_FROM,
-    to,
-    subject,
-    html,
-  });
+  console.log(`[Email] Sending email to="${to}" subject="${subject}"`);
+  try {
+    const info = await transporter.sendMail({
+      from: EMAIL_FROM,
+      to,
+      subject,
+      html,
+    });
+    console.log(`[Email] Sent successfully to="${to}" messageId="${info.messageId}"`);
+  } catch (error) {
+    console.error(`[Email] Failed to send to="${to}" subject="${subject}"`, error);
+    throw error;
+  }
 }
 
 export async function sendVerificationEmail(to: string, verificationUrl: string): Promise<void> {

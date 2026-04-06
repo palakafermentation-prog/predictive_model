@@ -9,7 +9,7 @@ from .qc_rules import generate_qc_flags
 # --- 1. Load Registry & Models ---
 def load_system():
     base_dir = os.path.dirname(os.path.abspath(__file__))
-    artifact_dir = os.environ.get("MODEL_DIR") or os.path.join(base_dir, "..", "ml", "models", "trained")
+    artifact_dir = os.path.join(base_dir, "../artifacts")
     
     registry_path = os.path.join(artifact_dir, "model_registry.json")
     try:

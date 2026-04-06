@@ -12,6 +12,20 @@ from schemas import PredictionErrorBand, PredictionMetadata, PredictionPredictio
 
 logger = logging.getLogger(__name__)
 
+
+class PalakaInferenceError(Exception):
+    """
+    Raised when palaka_model returns a structured error response. Carries the
+    palaka error code but NOT the raw message — the vendor's str(e) text may
+    include exception details and must not propagate to end users. The full
+    error dict is logged server-side at the raise site.
+    """
+
+    def __init__(self, code: str):
+        self.code = code
+        super().__init__(f"palaka:{code}")
+
+
 _MODEL_MODE = os.environ.get("MODEL_MODE", "mock")
 
 
@@ -53,7 +67,9 @@ def _predict_live(request: PredictionRequest) -> PredictionResponse:
 
     if result.get("status") == "error":
         err = result.get("error", {})
-        raise RuntimeError(f"palaka_model error [{err.get('code')}]: {err.get('message', '')}")
+        code = str(err.get("code") or "UNKNOWN")
+        logger.error("palaka_model returned error: %s", err)
+        raise PalakaInferenceError(code)
 
     data = result["data"]
 

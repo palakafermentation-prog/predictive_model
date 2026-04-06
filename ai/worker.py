@@ -5,7 +5,8 @@ Protocol:
   Startup: writes {"ready": true} to stdout once the model is loaded.
   Request: reads {"id": "<uuid>", "data": {<PredictionRequest fields>}} from stdin.
   Response: writes {"id": "<uuid>", "result": {<PredictionResponse fields>}} to stdout.
-  Error:    writes {"id": "<uuid>", "error": "<message>"} to stdout.
+  Error:    writes {"id": "<uuid>", "error": {"code": "<STABLE_CODE>"}} to stdout.
+            Raw exception text is written to stderr via logging, never to stdout.
 
 All logging goes to stderr so it does not contaminate the JSON line stream.
 """
@@ -24,7 +25,7 @@ logging.basicConfig(
 logger = logging.getLogger("worker")
 
 # Import predictor at module level — loads the model into memory once at startup
-from ml.predictor import predict
+from ml.predictor import PalakaInferenceError, predict
 from schemas import PredictionRequest
 
 _shutdown = False
@@ -56,9 +57,12 @@ def _process_line(line: str) -> str:
         response = predict(request)
 
         return json.dumps({"id": request_id, "result": response.model_dump()})
-    except Exception as exc:
+    except PalakaInferenceError as exc:
+        logger.exception("palaka inference error for request %s", request_id)
+        return json.dumps({"id": request_id, "error": {"code": f"PALAKA_{exc.code}"}})
+    except Exception:
         logger.exception("Error processing request %s", request_id)
-        return json.dumps({"id": request_id, "error": str(exc)})
+        return json.dumps({"id": request_id, "error": {"code": "WORKER_ERROR"}})
 
 
 def main() -> None:

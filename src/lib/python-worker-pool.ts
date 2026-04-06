@@ -21,6 +21,8 @@ import * as readline from "readline";
 
 import type { PredictionRequest, PredictionResponse } from "@pferm/shared-schemas";
 
+import { ServiceUnavailableError } from "@/lib/errors";
+
 // ---------------------------------------------------------------------------
 // Constants
 // ---------------------------------------------------------------------------
@@ -155,8 +157,6 @@ export class PythonWorkerPool {
       HOME: process.env.HOME,
       LANG: process.env.LANG,
       MODEL_MODE: process.env.MODEL_MODE,
-      MODEL_DIR: process.env.MODEL_DIR,
-      MODEL_DIR_ALLOW_EXTERNAL: process.env.MODEL_DIR_ALLOW_EXTERNAL,
       VIRTUAL_ENV: process.env.VIRTUAL_ENV,
       PYTHONPATH: process.env.PYTHONPATH,
     };
@@ -267,7 +267,16 @@ export class PythonWorkerPool {
     slot.pending = null;
 
     if (msg.error) {
-      pending.reject(new Error(String(msg.error)));
+      // Worker errors are structured: {code: "<STABLE_CODE>"}. A bare-string
+      // fallback is kept for rolling-deploy scenarios where an older worker
+      // is still emitting the legacy shape — it is coerced to WORKER_ERROR.
+      const errObj = msg.error as { code?: string } | string;
+      const code =
+        typeof errObj === "object" && errObj && typeof errObj.code === "string"
+          ? errObj.code
+          : "WORKER_ERROR";
+      console.error(`[ai-worker-${index}] worker error for ${pending.id}: code=${code}`);
+      pending.reject(new ServiceUnavailableError(`AI prediction failed (${code})`));
     } else {
       pending.resolve(msg.result as PredictionResponse);
     }

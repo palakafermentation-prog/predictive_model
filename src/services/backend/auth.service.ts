@@ -277,12 +277,14 @@ export async function resendVerification(email: string): Promise<{ message: stri
  * Request password reset — sends reset link via configured callback (logs to console in dev)
  */
 export async function forgotPassword(email: string): Promise<{ message: string; emailFailed?: boolean }> {
+  console.log(`[Auth] forgotPassword called for email="${email}"`);
   try {
     await auth.api.requestPasswordReset({
       body: { email, redirectTo: "/reset-password" },
     });
+    console.log(`[Auth] requestPasswordReset completed for email="${email}"`);
   } catch (error) {
-    console.error("Forgot password error:", error);
+    console.error("[Auth] Forgot password error:", error);
     const isSmtpError = error instanceof Error && (
       error.message.includes("SMTP") || error.message.includes("ECONNREFUSED") ||
       error.message.includes("ETIMEDOUT") || error.message.includes("connect")
