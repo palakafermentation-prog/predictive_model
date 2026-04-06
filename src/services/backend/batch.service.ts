@@ -1,28 +1,29 @@
 import { prisma } from "@/lib/prisma";
-import { NotFoundError } from "@/lib/errors";
+import { HttpError, NotFoundError } from "@/lib/errors";
 import { generateBatchId } from "./db.service";
 import { predict } from "./prediction.service";
 import type { UserSession } from "./permissions";
-import type { BatchSaveRequest, PredictionPredictions, PredictionRequest } from "@pferm/shared-schemas";
+import { PredictionPredictionsSchema, type BatchSaveRequest, type PredictionPredictions, type PredictionRequest } from "@pferm/shared-schemas";
 
 /**
  * Normalize legacy prediction shapes from the DB to the current PredictionPredictions format.
  * Handles records saved before v0.2 schema where prediction_error_band was a plain float.
  */
 function normalizeLegacyPredictions(raw: unknown): PredictionPredictions {
-  const p = raw as Record<string, unknown>;
+  const p = (raw ?? {}) as Record<string, unknown>;
+
+  // Transform legacy error band (plain number) before Zod validation
   const errorBand = p.prediction_error_band;
-  return {
-    predicted_quality_score: p.predicted_quality_score as number,
+  const normalized = {
+    ...p,
     prediction_error_band:
       typeof errorBand === "number"
         ? { quality_score_1to5: errorBand, method: "legacy" }
-        : (errorBand as PredictionPredictions["prediction_error_band"]),
-    estimated_final_brix: p.estimated_final_brix as number,
-    estimated_final_acidity: (p.estimated_final_acidity ?? null) as number | null,
-    estimated_amino_acidity: p.estimated_amino_acidity as number,
-    predicted_off_flavor_probability: p.predicted_off_flavor_probability as number,
+        : errorBand,
+    estimated_final_acidity: p.estimated_final_acidity ?? null,
   };
+
+  return PredictionPredictionsSchema.parse(normalized);
 }
 
 const batchListSelect = {
@@ -164,10 +165,18 @@ export async function processCsvUpload(
       onProgress?.(i + 1, rows.length);
     } catch (error) {
       onProgress?.(i + 1, rows.length);
+      console.error(`[csv-upload] row ${i + 1} batch ${row.batch_id}:`, error);
+      // Prefer HttpError.code for uploader-visible messages. Any non-HttpError
+      // reaching this catch is an unexpected internal failure — surface a
+      // generic message so raw exception text never leaks per-row.
+      const message =
+        error instanceof HttpError
+          ? `${error.code}: ${error.message}`
+          : "Prediction failed for this row";
       errors.push({
         row: i + 1,
         batchId: row.batch_id,
-        message: error instanceof Error ? error.message : "Unknown error",
+        message,
       });
     }
   }

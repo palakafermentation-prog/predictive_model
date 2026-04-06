@@ -3,6 +3,8 @@
 import * as React from "react";
 import { getBatch } from "@/services/frontend/batch";
 import { PredictionResults } from "@/components/prediction-results";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Skeleton } from "@/components/ui/skeleton";
 import type { BatchDetail } from "@pferm/shared-schemas";
 
 interface BatchDetailDrawerContentProps {
@@ -31,9 +33,9 @@ export default function BatchDetailDrawerContent({ id }: BatchDetailDrawerConten
 
   if (error) {
     return (
-      <div role="alert" className="rounded-md bg-destructive/10 border border-destructive p-3 text-sm text-destructive">
-        {error}
-      </div>
+      <Alert variant="destructive">
+        <AlertDescription>{error}</AlertDescription>
+      </Alert>
     );
   }
 
@@ -46,18 +48,9 @@ export default function BatchDetailDrawerContent({ id }: BatchDetailDrawerConten
         className="space-y-4"
       >
         <span className="sr-only">Loading batch details…</span>
-        <div
-          aria-hidden="true"
-          className="h-6 w-32 bg-muted rounded animate-pulse motion-reduce:animate-none"
-        />
-        <div
-          aria-hidden="true"
-          className="h-40 bg-muted rounded animate-pulse motion-reduce:animate-none"
-        />
-        <div
-          aria-hidden="true"
-          className="h-40 bg-muted rounded animate-pulse motion-reduce:animate-none"
-        />
+        <Skeleton className="h-6 w-32" aria-hidden="true" />
+        <Skeleton className="h-40" aria-hidden="true" />
+        <Skeleton className="h-40" aria-hidden="true" />
       </div>
     );
   }

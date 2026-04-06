@@ -1,6 +1,7 @@
 "use client";
 
 import { cn } from "@/lib/utils";
+import { Alert } from "@/components/ui/alert";
 
 interface QcStatusBannerProps {
   qcStatus: string;
@@ -29,24 +30,20 @@ function getSeverity(status: string): "optimal" | "warning" | "alert" {
   return "warning";
 }
 
-const severityStyles = {
-  optimal: "bg-qc-optimal text-qc-optimal-foreground",
-  warning: "bg-qc-warning text-qc-warning-foreground",
-  alert: "bg-qc-alert text-qc-alert-foreground",
-};
+const severityToVariant = {
+  optimal: "qc-optimal",
+  warning: "qc-warning",
+  alert: "qc-alert",
+} as const;
 
 export function QcStatusBanner({ qcStatus, qcFlags }: QcStatusBannerProps) {
   const severity = getSeverity(qcStatus);
   const label = QC_STATUS_LABELS[qcStatus];
+  const variant = severityToVariant[severity];
 
   return (
     <div className="space-y-2" role="status">
-      <div
-        className={cn(
-          "rounded-lg px-4 py-3 text-sm font-semibold",
-          severityStyles[severity],
-        )}
-      >
+      <Alert variant={variant} className="font-semibold">
         {label ? (
           <>
             <span aria-hidden="true">{label.icon}</span> {label.text}
@@ -54,19 +51,17 @@ export function QcStatusBanner({ qcStatus, qcFlags }: QcStatusBannerProps) {
         ) : (
           qcStatus
         )}
-      </div>
+      </Alert>
       {qcFlags.length > 0 && (
         <ul className="space-y-1 list-none p-0">
           {qcFlags.map((flag) => (
-            <li
-              key={flag}
-              className={cn(
-                "rounded-md px-3 py-2 text-sm",
-                severityStyles[severity],
-                "opacity-85",
-              )}
-            >
-              {QC_FLAG_LABELS[flag] ?? flag}
+            <li key={flag}>
+              <Alert
+                variant={variant}
+                className={cn("py-2", "opacity-85")}
+              >
+                {QC_FLAG_LABELS[flag] ?? flag}
+              </Alert>
             </li>
           ))}
         </ul>

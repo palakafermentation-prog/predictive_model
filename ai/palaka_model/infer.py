@@ -1,52 +1,16 @@
 # palaka_model/infer.py
 import joblib
-import logging
 import os
 import pandas as pd
 import json
 from .preprocess import validate_payload, get_soft_validation_warnings
 from .qc_rules import generate_qc_flags
 
-logger = logging.getLogger(__name__)
-
-
-def _resolve_artifact_dir() -> str:
-    """
-    Resolve the model artifact directory, enforcing an allowlist.
-
-    SECURITY: joblib.load() deserializes pickle — anyone who can control the
-    artifact directory can execute arbitrary code in the worker process. We
-    constrain MODEL_DIR to paths under the ai/ workspace to prevent an operator
-    (or compromised env) from pointing the loader at an attacker-controlled
-    directory outside the project tree. For an explicit escape hatch, set
-    MODEL_DIR_ALLOW_EXTERNAL=1 (use only for vetted deployment paths).
-    """
-    base_dir = os.path.dirname(os.path.abspath(__file__))
-    ai_root = os.path.realpath(os.path.join(base_dir, ".."))
-    default_dir = os.path.join(ai_root, "ml", "models", "trained")
-
-    override = os.environ.get("MODEL_DIR")
-    if not override:
-        return default_dir
-
-    resolved = os.path.realpath(override)
-    allow_external = os.environ.get("MODEL_DIR_ALLOW_EXTERNAL") == "1"
-    if not allow_external and not (resolved == ai_root or resolved.startswith(ai_root + os.sep)):
-        logger.warning(
-            "MODEL_DIR=%s resolves outside ai/ workspace (%s) — ignoring. "
-            "Set MODEL_DIR_ALLOW_EXTERNAL=1 to override.",
-            override,
-            ai_root,
-        )
-        return default_dir
-    return resolved
-
-
 # --- 1. Load Registry & Models ---
 def load_system():
-    artifact_dir = _resolve_artifact_dir()
-    logger.info("Loading model artifacts from %s", artifact_dir)
-
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    artifact_dir = os.environ.get("MODEL_DIR") or os.path.join(base_dir, "..", "ml", "models", "trained")
+    
     registry_path = os.path.join(artifact_dir, "model_registry.json")
     try:
         with open(registry_path, "r") as f:
@@ -54,10 +18,6 @@ def load_system():
     except Exception:
         registry = {"model_version": "v1.0_fallback", "last_trained": "Unknown"}
 
-    # SECURITY: joblib.load is pickle-based and will execute arbitrary code
-    # embedded in the artifact. Trust boundary = whoever can write to
-    # artifact_dir. The allowlist in _resolve_artifact_dir() keeps this bounded
-    # to the ai/ workspace under normal operation.
     try:
         imp_X = joblib.load(os.path.join(artifact_dir, "imputer_X.joblib"))
         m1 = joblib.load(os.path.join(artifact_dir, "prod_stage1.joblib"))
