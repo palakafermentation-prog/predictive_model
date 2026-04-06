@@ -231,10 +231,13 @@ flowchart TD
 - Concurrency controlled by `AI_WORKER_COUNT` (default 3, range 1–5)
 - Requests that exceed worker capacity are queued in FIFO order; frontend polls `/api/queue/status` for position
 - Mock vs. live model toggled by `MODEL_MODE` in `ai/.env` — no code changes needed
+- Live mode dispatches through `ai/palaka_model/` (vendored ML package) using trained sklearn artifacts in `ai/ml/models/trained/`
+- `MODEL_DIR` in `ai/.env` sets the artifact directory (required for live mode); defaults to `ai/ml/models/trained`
+- scikit-learn==1.6.1 is pinned in `ai/pyproject.toml` to match the trained model artifacts
 
 **Setup:**
 ```bash
-pnpm setup:ai    # Installs Python deps in ai/.venv via uv (numpy, pandas, scikit-learn, joblib)
+pnpm setup:ai    # Installs Python deps in ai/.venv via uv (numpy, pandas, scikit-learn==1.6.1, joblib)
 pnpm dev:ai      # Run a single worker standalone for manual testing
 ```
 

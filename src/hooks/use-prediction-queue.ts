@@ -6,6 +6,7 @@ import { NEXT_PUBLIC_API_BASE_URL } from "@/lib/env";
 export interface QueueStatus {
   position: number;
   estimatedWaitMs: number;
+  complete?: boolean;
   processedRows?: number;
   totalRows?: number;
 }
@@ -38,16 +39,17 @@ export function usePredictionQueue(requestId: string | null): QueueStatus | null
         credentials: "include",
       });
 
-      if (res.status === 404) {
-        // Request completed or expired — stop polling
+      if (!res.ok) return; // 404 or other error — keep polling, cleanup handles stop
+
+      const json = await res.json() as { data: QueueStatus };
+
+      if (json.data.complete) {
+        // Request completed — stop polling
         setStatus(null);
         stopPolling();
         return;
       }
 
-      if (!res.ok) return;
-
-      const json = await res.json() as { data: QueueStatus };
       setStatus(json.data);
     } catch {
       // Network error — keep polling, do not reset status

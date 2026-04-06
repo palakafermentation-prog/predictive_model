@@ -11,9 +11,12 @@
 export interface CsvProgress {
   totalRows: number;
   processedRows: number;
+  completedAt?: number;
 }
 
-const progressMap = new Map<string, CsvProgress>();
+const globalWithCsvProgress = globalThis as unknown as { csvProgressMap: Map<string, CsvProgress> | undefined };
+const progressMap = globalWithCsvProgress.csvProgressMap ?? new Map<string, CsvProgress>();
+globalWithCsvProgress.csvProgressMap = progressMap;
 
 /** Register a CSV upload. Call before processing starts. */
 export function register(requestId: string, totalRows: number): void {
@@ -28,12 +31,22 @@ export function update(requestId: string, processedRows: number): void {
   }
 }
 
-/** Remove tracking entry. Call after processing completes (success or error). */
+const COMPLETED_TTL_MS = 30_000;
+
+/** Mark upload as complete. Entry is retained briefly for status polling. */
 export function complete(requestId: string): void {
-  progressMap.delete(requestId);
+  const entry = progressMap.get(requestId);
+  if (entry) {
+    entry.completedAt = Date.now();
+  }
+  // Prune stale completed entries
+  const cutoff = Date.now() - COMPLETED_TTL_MS;
+  for (const [id, e] of progressMap) {
+    if (e.completedAt && e.completedAt < cutoff) progressMap.delete(id);
+  }
 }
 
-/** Get current progress, or null if not tracked. */
+/** Get current progress, or null if not tracked (or expired). */
 export function get(requestId: string): CsvProgress | null {
   return progressMap.get(requestId) ?? null;
 }

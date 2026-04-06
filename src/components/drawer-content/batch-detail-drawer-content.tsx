@@ -3,6 +3,8 @@
 import * as React from "react";
 import { getBatch } from "@/services/frontend/batch";
 import { PredictionResults } from "@/components/prediction-results";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Skeleton } from "@/components/ui/skeleton";
 import type { BatchDetail } from "@pferm/shared-schemas";
 
 interface BatchDetailDrawerContentProps {
@@ -31,18 +33,24 @@ export default function BatchDetailDrawerContent({ id }: BatchDetailDrawerConten
 
   if (error) {
     return (
-      <div role="alert" className="rounded-md bg-destructive/10 border border-destructive p-3 text-sm text-destructive">
-        {error}
-      </div>
+      <Alert variant="destructive">
+        <AlertDescription>{error}</AlertDescription>
+      </Alert>
     );
   }
 
   if (!batch) {
     return (
-      <div className="space-y-4">
-        <div className="h-6 w-32 bg-muted rounded animate-pulse motion-reduce:animate-none" />
-        <div className="h-40 bg-muted rounded animate-pulse motion-reduce:animate-none" />
-        <div className="h-40 bg-muted rounded animate-pulse motion-reduce:animate-none" />
+      <div
+        role="status"
+        aria-busy="true"
+        aria-live="polite"
+        className="space-y-4"
+      >
+        <span className="sr-only">Loading batch details…</span>
+        <Skeleton className="h-6 w-32" aria-hidden="true" />
+        <Skeleton className="h-40" aria-hidden="true" />
+        <Skeleton className="h-40" aria-hidden="true" />
       </div>
     );
   }
@@ -53,6 +61,7 @@ export default function BatchDetailDrawerContent({ id }: BatchDetailDrawerConten
     predictions: batch.predictions,
     qc_status: batch.qcStatus,
     qc_flags: batch.qcFlags,
+    warnings: [],
     model_version: batch.modelVersion ?? undefined,
     schema_version: batch.schemaVersion ?? undefined,
   };
@@ -81,7 +90,7 @@ export default function BatchDetailDrawerContent({ id }: BatchDetailDrawerConten
       </div>
 
       <div className="border-t pt-6">
-        <PredictionResults response={predictionResponse} />
+        <PredictionResults response={predictionResponse} headingLevel="h3" />
       </div>
     </div>
   );

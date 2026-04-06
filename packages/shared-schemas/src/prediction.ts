@@ -15,15 +15,25 @@ export const PredictionRequestSchema = z.object({
 
 // --- Response Schema ---
 
+export const PredictionErrorBandSchema = z.object({
+  quality_score_1to5: z.number(),
+  method: z.string(),
+});
+
+export const PredictionMetadataSchema = z.object({
+  model_version: z.string().optional(),
+  last_trained_date: z.string().optional(),
+  schema_version: z.string(),
+  units: z.record(z.string(), z.string()).optional(),
+  qc_thresholds_used: z.record(z.string(), z.string()).optional(),
+});
+
 export const PredictionPredictionsSchema = z.object({
   predicted_quality_score: z.number(),
-  prediction_error_band: z.number(),
+  prediction_error_band: PredictionErrorBandSchema,
   estimated_final_brix: z.number(),
-  estimated_final_acidity: z.number(),
+  estimated_final_acidity: z.number().nullable(),
   estimated_amino_acidity: z.number(),
-  predicted_texture_astringency: z.number(),
-  predicted_alcohol_burn_intensity: z.number(),
-  predicted_floral_probability: z.number(),
   predicted_off_flavor_probability: z.number(),
 });
 
@@ -32,8 +42,10 @@ export const PredictionResponseSchema = z.object({
   predictions: PredictionPredictionsSchema,
   qc_status: z.string(),
   qc_flags: z.array(z.string()),
+  warnings: z.array(z.string()).default([]),
   model_version: z.string().optional(),
   schema_version: z.string().optional(),
+  metadata: PredictionMetadataSchema.optional(),
 });
 
 // --- Error Schema (422) ---
@@ -47,6 +59,8 @@ export const PredictionErrorSchema = z.object({
 // --- Types ---
 
 export type PredictionRequest = z.infer<typeof PredictionRequestSchema>;
+export type PredictionErrorBand = z.infer<typeof PredictionErrorBandSchema>;
+export type PredictionMetadata = z.infer<typeof PredictionMetadataSchema>;
 export type PredictionPredictions = z.infer<typeof PredictionPredictionsSchema>;
 export type PredictionResponse = z.infer<typeof PredictionResponseSchema>;
 export type PredictionError = z.infer<typeof PredictionErrorSchema>;

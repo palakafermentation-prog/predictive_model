@@ -34,54 +34,43 @@ export function generateMockPrediction(input: PredictionRequest): PredictionResp
   // predicted_quality_score: 1–5 scale
   const baseQuality = 1 + polishFactor * 1.5 + Math.max(0, tempFactor) * 0.75 + Math.max(0, durationFactor) * 0.75;
   const predicted_quality_score = Math.round(Math.min(5, Math.max(1, baseQuality + rand(0) * 0.5 - 0.25)) * 100) / 100;
-  const prediction_error_band = Math.round((0.1 + rand(1) * 0.3) * 100) / 100;
 
   const estimated_final_brix = Math.round((4 + rand(2) * 6) * 100) / 100; // 4–10 °Bx
   const estimated_final_acidity = Math.round((1.0 + rand(3) * 1.5) * 100) / 100; // 1.0–2.5
   const estimated_amino_acidity = Math.round((0.5 + rand(4) * 1.0) * 100) / 100; // 0.5–1.5
-  const predicted_texture_astringency = Math.round((1.0 + rand(5) * 3.0) * 100) / 100; // 1–4
-  const predicted_alcohol_burn_intensity = Math.round((1.0 + rand(6) * 3.0) * 100) / 100; // 1–4
-
-  const predicted_floral_probability = Math.round(rand(7) * 100) / 100;
   const predicted_off_flavor_probability = Math.round(rand(8) * 0.4 * 100) / 100;
 
-  // Determine QC status based on quality and off-flavor risk
-  let qc_status: string;
+  // Determine QC status and flags (machine-readable, same as live mode)
   const qc_flags: string[] = [];
 
   if (predicted_off_flavor_probability > 0.3) {
-    qc_status = "\uD83D\uDEA8 High off-flavor risk";
-    qc_flags.push(`Off-flavor probability ${(predicted_off_flavor_probability * 100).toFixed(0)}% exceeds threshold`);
-  } else if (predicted_quality_score < 2.5 || input.koji_incubation_hours > 50) {
-    qc_status = "\u26A0\uFE0F Warning";
-    if (predicted_quality_score < 2.5) {
-      qc_flags.push("Quality score below target range");
-    }
-    if (input.koji_incubation_hours > 50) {
-      qc_flags.push("Koji incubation hours near upper limit — risk of over-saccharification");
-    }
-    if (estimated_final_brix > 9) {
-      qc_flags.push("Elevated Brix — potential sweetness imbalance");
-    }
-  } else {
-    qc_status = "\u2705 Optimal Spec";
+    qc_flags.push("high_off_flavor_probability");
   }
+  if (input.koji_incubation_hours > 50) {
+    qc_flags.push("high_acidity_risk");
+  }
+  if (estimated_final_brix > 9) {
+    qc_flags.push("elevated_brix");
+  }
+
+  const qc_status = qc_flags.length === 0 ? "pass" : "review";
 
   return {
     batch_id: input.batch_id,
     predictions: {
       predicted_quality_score,
-      prediction_error_band,
+      prediction_error_band: {
+        quality_score_1to5: Math.round((0.1 + rand(1) * 0.3) * 100) / 100,
+        method: "mock",
+      },
       estimated_final_brix,
       estimated_final_acidity,
       estimated_amino_acidity,
-      predicted_texture_astringency,
-      predicted_alcohol_burn_intensity,
-      predicted_floral_probability,
       predicted_off_flavor_probability,
     },
     qc_status,
     qc_flags,
+    warnings: [],
     model_version: "mock-1.0",
     schema_version: "v0.2",
   };

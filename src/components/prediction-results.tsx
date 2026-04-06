@@ -7,28 +7,32 @@ import { QcStatusBanner } from "@/components/ui/qc-status-banner";
 
 interface PredictionResultsProps {
   response: PredictionResponse;
+  /**
+   * Heading level for the "Results" title. Defaults to "h2" for standalone page
+   * use. Pass "h3" when nested inside a container that already provides an h2
+   * (e.g. the drawer's SheetTitle) so heading hierarchy stays valid.
+   */
+  headingLevel?: "h2" | "h3";
 }
 
 const MEDIATOR_FIELDS = [
   { key: "estimated_final_brix", label: "Final Brix" },
-  { key: "estimated_final_acidity", label: "Acidity" },
+  { key: "estimated_final_acidity", label: "Acidity (San-do)" },
   { key: "estimated_amino_acidity", label: "Amino Acidity" },
-  { key: "predicted_texture_astringency", label: "Texture Astringency" },
-  { key: "predicted_alcohol_burn_intensity", label: "Alcohol Burn Intensity" },
 ] as const;
 
 const PROBABILITY_FIELDS = [
-  { key: "predicted_floral_probability", label: "Floral" },
   { key: "predicted_off_flavor_probability", label: "Off-Flavor" },
 ] as const;
 
-export function PredictionResults({ response }: PredictionResultsProps) {
-  const { predictions, qc_status, qc_flags, batch_id, model_version, schema_version } = response;
+export function PredictionResults({ response, headingLevel = "h2" }: PredictionResultsProps) {
+  const { predictions, qc_status, qc_flags, warnings, batch_id, model_version, schema_version } = response;
+  const HeadingTag = headingLevel;
 
   return (
     <div className="space-y-6">
       <div className="flex items-baseline justify-between">
-        <h2 className="text-xl font-semibold tracking-tight">Results</h2>
+        <HeadingTag className="text-xl font-semibold tracking-tight">Results</HeadingTag>
         <span className="text-sm text-muted-foreground font-mono">Batch: {batch_id}</span>
       </div>
 
@@ -47,12 +51,14 @@ export function PredictionResults({ response }: PredictionResultsProps) {
             </span>
             <span className="text-lg text-muted-foreground font-mono">/ 5</span>
             <span className="text-lg text-muted-foreground font-mono">
-              &plusmn; {predictions.prediction_error_band.toFixed(1)}
+              &plusmn; {predictions.prediction_error_band.quality_score_1to5.toFixed(1)}
             </span>
           </div>
           <p className="mt-1 text-xs text-muted-foreground font-mono">
-            Score range: {(predictions.predicted_quality_score - predictions.prediction_error_band).toFixed(1)} &ndash;{" "}
-            {(predictions.predicted_quality_score + predictions.prediction_error_band).toFixed(1)}
+            Score range:{" "}
+            {(predictions.predicted_quality_score - predictions.prediction_error_band.quality_score_1to5).toFixed(1)}{" "}
+            &ndash;{" "}
+            {(predictions.predicted_quality_score + predictions.prediction_error_band.quality_score_1to5).toFixed(1)}
           </p>
         </CardContent>
       </Card>
@@ -65,14 +71,17 @@ export function PredictionResults({ response }: PredictionResultsProps) {
           </CardHeader>
           <CardContent>
             <dl className="space-y-3">
-              {MEDIATOR_FIELDS.map(({ key, label }) => (
-                <div key={key} className="flex items-center justify-between">
-                  <dt className="text-sm text-muted-foreground">{label}</dt>
-                  <dd className="text-sm font-medium font-mono">
-                    {predictions[key].toFixed(2)}
-                  </dd>
-                </div>
-              ))}
+              {MEDIATOR_FIELDS.map(({ key, label }) => {
+                const value = predictions[key];
+                return (
+                  <div key={key} className="flex items-center justify-between">
+                    <dt className="text-sm text-muted-foreground">{label}</dt>
+                    <dd className="text-sm font-medium font-mono">
+                      {value == null ? "N/A" : value.toFixed(2)}
+                    </dd>
+                  </div>
+                );
+              })}
             </dl>
           </CardContent>
         </Card>
@@ -109,6 +118,22 @@ export function PredictionResults({ response }: PredictionResultsProps) {
           </CardContent>
         </Card>
       </div>
+
+      {/* Warnings — model soft-validation notices */}
+      {warnings && warnings.length > 0 && (
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base text-yellow-700 dark:text-yellow-400">Warnings</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ul className="space-y-1 text-sm text-muted-foreground">
+              {warnings.map((warning, i) => (
+                <li key={i}>{warning}</li>
+              ))}
+            </ul>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Metadata footer — only shown when version info is available */}
       {(model_version || schema_version) && (

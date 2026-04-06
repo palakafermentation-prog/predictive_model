@@ -1,39 +1,32 @@
 """
-Prediction dispatcher — loads the appropriate predictor once at startup based on MODEL_MODE.
+Prediction dispatcher — routes to mock or live model based on MODEL_MODE.
 
 MODEL_MODE=mock (default): uses mock_model.generate_mock_prediction()
-MODEL_MODE=live:            loads a serialized sklearn pipeline from MODEL_PATH
+MODEL_MODE=live:            dispatches to palaka_model.infer.predict()
 """
 
 import logging
 import os
 
-from schemas import PredictionRequest, PredictionResponse
+from schemas import PredictionErrorBand, PredictionMetadata, PredictionPredictions, PredictionRequest, PredictionResponse
 
 logger = logging.getLogger(__name__)
 
+
+class PalakaInferenceError(Exception):
+    """
+    Raised when palaka_model returns a structured error response. Carries the
+    palaka error code but NOT the raw message — the vendor's str(e) text may
+    include exception details and must not propagate to end users. The full
+    error dict is logged server-side at the raise site.
+    """
+
+    def __init__(self, code: str):
+        self.code = code
+        super().__init__(f"palaka:{code}")
+
+
 _MODEL_MODE = os.environ.get("MODEL_MODE", "mock")
-_MODEL_PATH = os.environ.get("MODEL_PATH", "")
-
-# Live predictor loaded once at startup (MODEL_MODE=live only)
-_live_pipeline: object | None = None
-_live_feature_names: list[str] | None = None
-
-if _MODEL_MODE == "live":
-    if not _MODEL_PATH:
-        raise RuntimeError("MODEL_MODE=live requires MODEL_PATH to be set")
-    try:
-        import joblib
-
-        artifact = joblib.load(_MODEL_PATH)
-        _live_pipeline = artifact["pipeline"]
-        metadata = artifact.get("metadata", {})
-        _live_feature_names = metadata.get("feature_names")
-        logger.info("Loaded live model from %s", _MODEL_PATH)
-    except Exception as exc:
-        raise RuntimeError(f"Failed to load model from {_MODEL_PATH}: {exc}") from exc
-else:
-    logger.info("Running in mock mode")
 
 
 def predict(request: PredictionRequest) -> PredictionResponse:
@@ -51,52 +44,67 @@ def _predict_mock(request: PredictionRequest) -> PredictionResponse:
 
 def _predict_live(request: PredictionRequest) -> PredictionResponse:
     """
-    Run prediction using the loaded sklearn pipeline.
-    Converts the request to a DataFrame and calls pipeline.predict().
+    Dispatch to palaka_model.infer.predict().
+    Wraps the flat PredictionRequest fields into the {record_tier, inputs} payload
+    format expected by palaka_model, then translates the response dict to PredictionResponse.
     """
-    import numpy as np
-    import pandas as pd
+    from palaka_model import infer as palaka_infer
 
-    from schemas import PredictionPredictions
-
-    feature_dict = {
-        "rice_polish_ratio": request.rice_polish_ratio,
-        "koji_incubation_hours": request.koji_incubation_hours,
-        "moromi_duration_days": request.moromi_duration_days,
-        "initial_temperature_c": request.initial_temperature_c,
-        "water_ph": request.water_ph,
-        "water_hardness_ppm": request.water_hardness_ppm,
-        "yeast_pitch_rate_cells_ml": request.yeast_pitch_rate_cells_ml,
+    payload = {
+        "record_tier": 2,
+        "inputs": {
+            "rice_polish_ratio": request.rice_polish_ratio,
+            "koji_incubation_hours": request.koji_incubation_hours,
+            "moromi_duration_days": request.moromi_duration_days,
+            "initial_temperature_c": request.initial_temperature_c,
+            "water_ph": request.water_ph,
+            "water_hardness_ppm": request.water_hardness_ppm,
+            "yeast_pitch_rate_cells_ml": request.yeast_pitch_rate_cells_ml,
+        },
     }
 
-    if _live_feature_names is not None:
-        missing = set(_live_feature_names) - set(feature_dict.keys())
-        extra = set(feature_dict.keys()) - set(_live_feature_names)
-        if missing or extra:
-            raise ValueError(
-                f"Feature mismatch: missing={missing or 'none'}, extra={extra or 'none'}"
-            )
+    result = palaka_infer.predict(payload)
 
-    features = pd.DataFrame([feature_dict])
+    if result.get("status") == "error":
+        err = result.get("error", {})
+        code = str(err.get("code") or "UNKNOWN")
+        logger.error("palaka_model returned error: %s", err)
+        raise PalakaInferenceError(code)
 
-    result: np.ndarray = _live_pipeline.predict(features)  # type: ignore[union-attr]
-    row = result[0]
+    data = result["data"]
+
+    qc_flags: list[str] = data.get("qc_flags", [])
+    qc_status = "pass" if not qc_flags else "review"
+
+    error_band_raw = data.get("prediction_error_band", {})
+    error_band = PredictionErrorBand(
+        quality_score_1to5=error_band_raw.get("quality_score_1to5", 0.0),
+        method=error_band_raw.get("method", ""),
+    )
+
+    metadata_raw = data.get("metadata", {})
+    metadata = PredictionMetadata(
+        model_version=metadata_raw.get("model_version"),
+        last_trained_date=metadata_raw.get("last_trained_date"),
+        schema_version=metadata_raw.get("schema_version", "v0.2"),
+        units=metadata_raw.get("units"),
+        qc_thresholds_used=metadata_raw.get("qc_thresholds_used"),
+    )
 
     return PredictionResponse(
         batch_id=request.batch_id,
         predictions=PredictionPredictions(
-            predicted_quality_score=float(row[0]),
-            prediction_error_band=float(row[1]),
-            estimated_final_brix=float(row[2]),
-            estimated_final_acidity=float(row[3]),
-            estimated_amino_acidity=float(row[4]),
-            predicted_texture_astringency=float(row[5]),
-            predicted_alcohol_burn_intensity=float(row[6]),
-            predicted_floral_probability=float(row[7]),
-            predicted_off_flavor_probability=float(row[8]),
+            predicted_quality_score=data["predicted_quality_score"],
+            prediction_error_band=error_band,
+            estimated_final_brix=data["estimated_final_brix"],
+            estimated_final_acidity=data.get("estimated_final_acidity"),
+            estimated_amino_acidity=data["estimated_amino_acidity"],
+            predicted_off_flavor_probability=data["predicted_off_flavor_probability"],
         ),
-        qc_status="live",
-        qc_flags=[],
-        model_version=os.path.basename(_MODEL_PATH),
-        schema_version="v0.2",
+        qc_status=qc_status,
+        qc_flags=qc_flags,
+        warnings=data.get("warnings", []),
+        model_version=metadata_raw.get("model_version"),
+        schema_version=metadata_raw.get("schema_version", "v0.2"),
+        metadata=metadata,
     )

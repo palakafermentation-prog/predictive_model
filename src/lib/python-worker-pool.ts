@@ -21,6 +21,8 @@ import * as readline from "readline";
 
 import type { PredictionRequest, PredictionResponse } from "@pferm/shared-schemas";
 
+import { ServiceUnavailableError } from "@/lib/errors";
+
 // ---------------------------------------------------------------------------
 // Constants
 // ---------------------------------------------------------------------------
@@ -29,6 +31,9 @@ const PROJECT_ROOT = process.cwd();
 const WORKER_SCRIPT = path.join(PROJECT_ROOT, "ai", "worker.py");
 const ROLLING_WINDOW_SIZE = 20; // number of recent durations used for wait estimation
 const RESPAWN_DELAY_MS = 500;
+const MAX_CONSECUTIVE_FAILURES = 3;
+const PERMANENT_SPAWN_ERRORS = new Set(["ENOENT", "EACCES", "EPERM"]);
+const COMPLETED_TTL_MS = 30_000; // how long to remember completed request IDs
 
 // ---------------------------------------------------------------------------
 // Internal types
@@ -65,6 +70,9 @@ export class PythonWorkerPool {
   private slots: Array<WorkerSlot | null> = [];
   private queue: QueueEntry[] = [];
   private recentDurationsMs: number[] = [];
+  private consecutiveFailures: number[] = [];
+  private permanentlyFailed: boolean[] = [];
+  private completedIds: Map<string, number> = new Map();
 
   constructor(workerCount: number, pythonExec: string) {
     this.workerCount = workerCount;
@@ -73,6 +81,8 @@ export class PythonWorkerPool {
 
   start(): void {
     this.slots = new Array(this.workerCount).fill(null);
+    this.consecutiveFailures = new Array(this.workerCount).fill(0);
+    this.permanentlyFailed = new Array(this.workerCount).fill(false);
     for (let i = 0; i < this.workerCount; i++) {
       this._spawnWorker(i);
     }
@@ -87,6 +97,14 @@ export class PythonWorkerPool {
    * Returns a Promise that resolves when the worker responds.
    */
   dispatch(requestId: string, data: PredictionRequest): Promise<PredictionResponse> {
+    if (this._isPoolDead()) {
+      return Promise.reject(
+        new Error(
+          "AI worker pool is unavailable. All workers failed to start. " +
+          "Run `pnpm setup:ai` to configure the Python environment.",
+        ),
+      );
+    }
     return new Promise<PredictionResponse>((resolve, reject) => {
       this.queue.push({ id: requestId, data, resolve, reject });
       this._tryDispatch();
@@ -98,7 +116,7 @@ export class PythonWorkerPool {
    * or null if the requestId is unknown.
    * position = 0 means the request is currently being processed.
    */
-  getQueueStatus(requestId: string): { position: number; estimatedWaitMs: number } | null {
+  getQueueStatus(requestId: string): { position: number; estimatedWaitMs: number; complete?: boolean } | null {
     // Check if currently being processed
     const processing = this.slots.some(s => s?.pending?.id === requestId);
     if (processing) {
@@ -106,14 +124,19 @@ export class PythonWorkerPool {
     }
 
     const queueIndex = this.queue.findIndex(e => e.id === requestId);
-    if (queueIndex === -1) return null;
+    if (queueIndex !== -1) {
+      const position = queueIndex + 1;
+      const avgMs = this._rollingAvgMs();
+      const estimatedWaitMs = Math.ceil(queueIndex / Math.max(1, this._activeWorkerCount())) * avgMs;
+      return { position, estimatedWaitMs };
+    }
 
-    const position = queueIndex + 1;
-    const avgMs = this._rollingAvgMs();
-    // Estimate: number of full batches ahead of this request × avg duration
-    const estimatedWaitMs = Math.ceil(queueIndex / Math.max(1, this._activeWorkerCount())) * avgMs;
+    // Check recently completed
+    if (this.completedIds.has(requestId)) {
+      return { position: 0, estimatedWaitMs: 0, complete: true };
+    }
 
-    return { position, estimatedWaitMs };
+    return null;
   }
 
   /** Returns a snapshot of pool utilisation. */
@@ -134,7 +157,6 @@ export class PythonWorkerPool {
       HOME: process.env.HOME,
       LANG: process.env.LANG,
       MODEL_MODE: process.env.MODEL_MODE,
-      MODEL_PATH: process.env.MODEL_PATH,
       VIRTUAL_ENV: process.env.VIRTUAL_ENV,
       PYTHONPATH: process.env.PYTHONPATH,
     };
@@ -156,9 +178,23 @@ export class PythonWorkerPool {
       process.stderr.write(`[ai-worker-${index}] ${chunk.toString()}`);
     });
 
+    proc.on("error", (err: NodeJS.ErrnoException) => {
+      const code = err.code ?? "UNKNOWN";
+      if (PERMANENT_SPAWN_ERRORS.has(code)) {
+        this.permanentlyFailed[index] = true;
+        console.error(
+          `[ai-worker-${index}] spawn failed (${code}): ${err.message}. ` +
+          `Python venv not found or not executable. Run \`pnpm setup:ai\` to fix.`,
+        );
+      } else {
+        console.error(`[ai-worker-${index}] spawn error (${code}): ${err.message}`);
+      }
+      // The `exit` event also fires after `error` — respawn logic stays there.
+    });
+
     proc.on("exit", (code, signal) => {
       const exitingSlot = this.slots[index];
-      console.error(`[ai-worker-${index}] exited (code=${code ?? "?"} signal=${signal ?? "none"}) — respawning`);
+      this.slots[index] = null;
 
       // Clean up readline to prevent it firing on the new process
       exitingSlot?.rl.close();
@@ -168,9 +204,32 @@ export class PythonWorkerPool {
         exitingSlot.pending.reject(new Error("Worker process exited unexpectedly"));
       }
 
-      this.slots[index] = null;
+      this.consecutiveFailures[index]++;
 
-      setTimeout(() => this._spawnWorker(index), RESPAWN_DELAY_MS);
+      const isPermanent = this.permanentlyFailed[index];
+      const exhausted = this.consecutiveFailures[index] >= MAX_CONSECUTIVE_FAILURES;
+
+      if (isPermanent) {
+        console.error(
+          `[ai-worker-${index}] permanent failure — will not respawn. ` +
+          `Run \`pnpm setup:ai\` to configure the Python environment.`,
+        );
+      } else if (exhausted) {
+        console.error(
+          `[ai-worker-${index}] exited (code=${code ?? "?"} signal=${signal ?? "none"}) — ` +
+          `${this.consecutiveFailures[index]}/${MAX_CONSECUTIVE_FAILURES} consecutive failures, giving up`,
+        );
+      } else {
+        console.error(
+          `[ai-worker-${index}] exited (code=${code ?? "?"} signal=${signal ?? "none"}) — ` +
+          `respawning (attempt ${this.consecutiveFailures[index] + 1}/${MAX_CONSECUTIVE_FAILURES})`,
+        );
+        setTimeout(() => this._spawnWorker(index), RESPAWN_DELAY_MS);
+      }
+
+      if (this._isPoolDead()) {
+        this._rejectAllQueued();
+      }
     });
   }
 
@@ -189,6 +248,7 @@ export class PythonWorkerPool {
     // Startup ready signal
     if (msg.ready === true) {
       slot.ready = true;
+      this.consecutiveFailures[index] = 0;
       this._tryDispatch();
       return;
     }
@@ -202,11 +262,21 @@ export class PythonWorkerPool {
 
     const durationMs = Date.now() - pending.startedAt;
     this._recordDuration(durationMs);
+    this._markCompleted(pending.id);
 
     slot.pending = null;
 
     if (msg.error) {
-      pending.reject(new Error(String(msg.error)));
+      // Worker errors are structured: {code: "<STABLE_CODE>"}. A bare-string
+      // fallback is kept for rolling-deploy scenarios where an older worker
+      // is still emitting the legacy shape — it is coerced to WORKER_ERROR.
+      const errObj = msg.error as { code?: string } | string;
+      const code =
+        typeof errObj === "object" && errObj && typeof errObj.code === "string"
+          ? errObj.code
+          : "WORKER_ERROR";
+      console.error(`[ai-worker-${index}] worker error for ${pending.id}: code=${code}`);
+      pending.reject(new ServiceUnavailableError(`AI prediction failed (${code})`));
     } else {
       pending.resolve(msg.result as PredictionResponse);
     }
@@ -248,6 +318,39 @@ export class PythonWorkerPool {
 
   private _activeWorkerCount(): number {
     return this.slots.filter(s => s !== null && s.ready).length;
+  }
+
+  private _markCompleted(requestId: string): void {
+    this.completedIds.set(requestId, Date.now());
+    // Prune stale entries to prevent unbounded growth
+    const cutoff = Date.now() - COMPLETED_TTL_MS;
+    for (const [id, ts] of this.completedIds) {
+      if (ts < cutoff) this.completedIds.delete(id);
+      else break; // Map preserves insertion order — all remaining are newer
+    }
+  }
+
+  private _isPoolDead(): boolean {
+    for (let i = 0; i < this.workerCount; i++) {
+      if (
+        !this.permanentlyFailed[i] &&
+        this.consecutiveFailures[i] < MAX_CONSECUTIVE_FAILURES
+      ) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  private _rejectAllQueued(): void {
+    const error = new Error(
+      "AI worker pool is unavailable. All workers failed to start. " +
+      "Run `pnpm setup:ai` to configure the Python environment.",
+    );
+    while (this.queue.length > 0) {
+      const entry = this.queue.shift()!;
+      entry.reject(error);
+    }
   }
 }
 

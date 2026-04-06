@@ -92,15 +92,14 @@
 | Field | Description |
 |---|---|
 | `predicted_quality_score` | Overall quality score, 1–5 scale |
-| `prediction_error_band` | Confidence interval around the quality score |
+| `prediction_error_band` | Confidence interval object: `{ quality_score_1to5, method }` |
 | `estimated_final_brix` | Estimated residual sugar (Brix) |
-| `estimated_final_acidity` | Estimated final acidity |
+| `estimated_final_acidity` | Estimated final acidity (nullable — may be null depending on model) |
 | `estimated_amino_acidity` | Estimated amino acid content |
-| `predicted_texture_astringency` | Texture/astringency prediction |
-| `predicted_alcohol_burn_intensity` | Alcohol burn intensity prediction |
-| `predicted_floral_probability` | Probability of floral character |
-| `predicted_off_flavor_probability` | Probability of off-flavor |
-| `qc_flags` | Array of quality control flag strings |
+| `predicted_off_flavor_probability` | Probability of off-flavor (hardcoded at 0.12 in Phase 1) |
+| `qc_status` | QC status string derived from `qc_flags` (`optimal`, `warning`, or `alert`) |
+| `qc_flags` | Array of quality control flag strings from the model |
+| `warnings` | Array of advisory warning strings from the model (may be empty) |
 | `model_version` | AI model version that generated the prediction |
 | `schema_version` | Schema version used (e.g., `v0.2`) |
 

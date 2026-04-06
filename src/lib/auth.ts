@@ -82,11 +82,13 @@ export const auth = betterAuth({
     enabled: true,
     requireEmailVerification: true,
     sendResetPassword: async ({ user, url }) => {
+      console.log(`[Auth] sendResetPassword callback invoked for user="${user.email}" url="${url}"`);
       const urlObj = new URL(url);
       const pathSegments = urlObj.pathname.split("/");
       const token = pathSegments[pathSegments.length - 1];
       const callbackPath = urlObj.searchParams.get("callbackURL") || "/reset-password";
       const resetUrl = `${urlObj.origin}${callbackPath}?token=${token}`;
+      console.log(`[Auth] Reset URL constructed: "${resetUrl}"`);
       await sendResetPasswordEmail(user.email, resetUrl);
     },
   },
