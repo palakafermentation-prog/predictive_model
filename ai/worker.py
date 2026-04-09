@@ -13,6 +13,7 @@ All logging goes to stderr so it does not contaminate the JSON line stream.
 
 import json
 import logging
+import os
 import signal
 import sys
 
@@ -42,7 +43,7 @@ signal.signal(signal.SIGTERM, _handle_sigterm)
 # Signal to the Node pool that this worker is ready to accept requests
 sys.stdout.write(json.dumps({"ready": True}) + "\n")
 sys.stdout.flush()
-logger.info("Worker ready")
+logger.info("Worker ready (MODEL_MODE=%s)", os.environ.get("MODEL_MODE", "mock"))
 
 
 def _process_line(line: str) -> str:

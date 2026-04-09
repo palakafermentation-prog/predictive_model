@@ -16,7 +16,9 @@ class PredictionRequest(BaseModel):
     initial_temperature_c: float = Field(ge=5, le=20)
     water_ph: float = Field(ge=3.0, le=8.0)
     water_hardness_ppm: float = Field(ge=5, le=100)
-    yeast_pitch_rate_cells_ml: float = Field(gt=0)
+    yeast_pitch_rate_cells_ml: Optional[float] = Field(default=None, gt=0)
+    rice_variety: Optional[str] = Field(default=None, max_length=100)
+    yeast_strain: Optional[str] = Field(default=None, max_length=100)
 
 
 class PredictionErrorBand(BaseModel):
@@ -39,6 +41,9 @@ class PredictionPredictions(BaseModel):
     estimated_final_acidity: Optional[float]
     estimated_amino_acidity: float
     predicted_off_flavor_probability: float
+    predicted_texture_astringency: Optional[float] = None
+    predicted_alcohol_burn_intensity: Optional[float] = None
+    predicted_floral_probability: Optional[float] = None
 
 
 class PredictionResponse(BaseModel):

@@ -85,7 +85,9 @@
 | `initial_temperature_c` | float | 5–20°C | Initial mash temperature |
 | `water_ph` | float | 3.0–8.0 | Water pH |
 | `water_hardness_ppm` | float | 5–100 ppm | Water hardness |
-| `yeast_pitch_rate_cells_ml` | float | > 0 | Yeast pitch rate (cells/mL) |
+| `yeast_pitch_rate_cells_ml` | float (optional) | > 0 | Yeast pitch rate (cells/mL). Optional — when omitted, the live model imputes it via the training median. |
+| `rice_variety` | string (optional) | ≤100 chars | Rice variety (e.g. Yamada Nishiki, Gohyakumangoku). Stored in DB only; not passed to the model at this stage, flagged for future integration. |
+| `yeast_strain` | string (optional) | ≤100 chars | Yeast strain (e.g. Kyokai 7, Kyokai 9, EC-1118). Stored in DB only; not passed to the model at this stage, flagged for future integration. |
 
 ### Output Fields (schema v0.2)
 

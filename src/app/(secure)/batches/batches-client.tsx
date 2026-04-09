@@ -35,6 +35,14 @@ const NUMERIC_FIELDS = [
   "initial_temperature_c",
 ] as const;
 
+// Fields where an empty cell is acceptable — parser passes `undefined` to Zod,
+// which then applies `.optional()` on the schema.
+const OPTIONAL_FIELDS = new Set<string>([
+  "yeast_pitch_rate_cells_ml",
+  "rice_variety",
+  "yeast_strain",
+]);
+
 function parseCsv(text: string): PredictionRequest[] {
   const lines = text.trim().split(/\r?\n/);
   if (lines.length < 2) throw new Error("CSV must have a header row and at least one data row");
@@ -43,16 +51,27 @@ function parseCsv(text: string): PredictionRequest[] {
 
   return lines.slice(1).map((line, i) => {
     const values = line.split(",").map((v) => v.trim());
-    const row: Record<string, string | number> = {};
+    const row: Record<string, string | number | undefined> = {};
 
     headers.forEach((header, j) => {
       const value = values[j] ?? "";
-      if (NUMERIC_FIELDS.includes(header as typeof NUMERIC_FIELDS[number])) {
+      const isNumeric = NUMERIC_FIELDS.includes(header as typeof NUMERIC_FIELDS[number]);
+      const isOptional = OPTIONAL_FIELDS.has(header);
+
+      if (value === "") {
+        if (isOptional) {
+          row[header] = undefined;
+          return;
+        }
+        // Required field left blank → let Zod produce a clear error downstream.
+      }
+
+      if (isNumeric && value !== "") {
         const num = parseFloat(value);
         if (isNaN(num)) throw new Error(`Row ${i + 2}: "${header}" must be a number, got "${value}"`);
         row[header] = num;
-      } else {
-        row[header] = value;
+      } else if (!isNumeric) {
+        row[header] = value === "" ? undefined : value;
       }
     });
 

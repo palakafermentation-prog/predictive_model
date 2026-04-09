@@ -2,6 +2,9 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   output: "standalone",
+  outputFileTracingIncludes: {
+    "/api/**": ["./ai/palaka_model/**", "./ai/artifacts/**"],
+  },
   transpilePackages: ["@pferm/shared-lib", "@pferm/shared-schemas"],
   async headers() {
     return [

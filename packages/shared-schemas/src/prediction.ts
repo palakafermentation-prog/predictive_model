@@ -10,7 +10,9 @@ export const PredictionRequestSchema = z.object({
   initial_temperature_c: z.number({ message: "Initial Temp is required" }).min(5, "Min 5°C").max(20, "Max 20°C"),
   water_ph: z.number({ message: "pH is required" }).min(3.0, "Min 3.0").max(8.0, "Max 8.0"),
   water_hardness_ppm: z.number({ message: "Hardness is required" }).min(5, "Min 5 ppm").max(100, "Max 100 ppm"),
-  yeast_pitch_rate_cells_ml: z.number({ message: "Pitch Rate is required" }).positive("Must be positive"),
+  yeast_pitch_rate_cells_ml: z.number().positive("Must be positive").optional(),
+  rice_variety: z.string().trim().max(100, "Max 100 characters").optional(),
+  yeast_strain: z.string().trim().max(100, "Max 100 characters").optional(),
 });
 
 // --- Response Schema ---
@@ -35,6 +37,9 @@ export const PredictionPredictionsSchema = z.object({
   estimated_final_acidity: z.number().nullable(),
   estimated_amino_acidity: z.number(),
   predicted_off_flavor_probability: z.number(),
+  predicted_texture_astringency: z.number().optional(),
+  predicted_alcohol_burn_intensity: z.number().optional(),
+  predicted_floral_probability: z.number().optional(),
 });
 
 export const PredictionResponseSchema = z.object({

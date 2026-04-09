@@ -50,12 +50,19 @@ def predict(payload: dict) -> dict:
         mediators = ['final_brix', 'acidity_sando', 'amino_acidity']
         pred_meds = pd.DataFrame(prod_stage1.predict(X_imp), columns=mediators)
         
-        # STAGE 2
+        # STAGE 2 
         cand_stage2 = pd.concat([X_imp, pred_meds], axis=1)
-        num_preds = pd.DataFrame(prod_stage2_num.predict(cand_stage2), columns=['overall_quality_1to5'])
+        # ใช้ 5 targets ตามที่เทรนมาเพื่อให้ได้ค่า Float Probability
+        target_cols = ['overall_quality_1to5', 'Texture_Astringency', 'Alcohol_Burn_Intensity', 'Flavor_Floral_YN', 'Off_Flavor_YN']
+        num_preds = pd.DataFrame(prod_stage2_num.predict(cand_stage2), columns=target_cols)
         
-        off_flavor_prob = 0.12 
         wset_score = round(float(num_preds['overall_quality_1to5'].iloc[0]), 2)
+        est_astringency = round(float(num_preds['Texture_Astringency'].iloc[0]), 2)
+        est_burn = round(float(num_preds['Alcohol_Burn_Intensity'].iloc[0]), 2)
+        # ดึงค่าเป็น Float ตรงๆ ไม่มีการปัดเป็น 0,1
+        est_floral_prob = round(float(num_preds['Flavor_Floral_YN'].iloc[0]), 4)
+        off_flavor_prob = round(float(num_preds['Off_Flavor_YN'].iloc[0]), 4) 
+        
         est_final_brix = round(float(pred_meds['final_brix'].iloc[0]), 2)
         est_amino = round(float(pred_meds['amino_acidity'].iloc[0]), 2)
         est_acidity_sando = round(float(pred_meds['acidity_sando'].iloc[0]) / 4.0, 2) 
@@ -72,6 +79,9 @@ def predict(payload: dict) -> dict:
             "status": "success",
             "data": {
                 "predicted_quality_score": wset_score,
+                "predicted_texture_astringency": est_astringency,
+                "predicted_alcohol_burn_intensity": est_burn,
+                "predicted_floral_probability": est_floral_prob,
                 "predicted_off_flavor_probability": off_flavor_prob,
                 "estimated_final_brix": est_final_brix,
                 "estimated_final_acidity": est_acidity_sando,
@@ -80,8 +90,8 @@ def predict(payload: dict) -> dict:
                 "warnings": list(set(warnings)),
                 "prediction_error_band": {"quality_score_1to5": 0.45, "method": "LOBO_95pct_residuals"},
                 "metadata": {
-                    "model_version": registry.get("model_version"), # ไดนามิกแล้ว!
-                    "last_trained_date": registry.get("last_trained"), # ไดนามิกแล้ว!
+                    "model_version": registry.get("model_version"),
+                    "last_trained_date": registry.get("last_trained"),
                     "schema_version": "v0.2",
                     "units": {
                         "estimated_final_brix": "Brix scale",

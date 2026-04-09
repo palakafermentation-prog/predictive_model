@@ -278,6 +278,14 @@ export class PythonWorkerPool {
       console.error(`[ai-worker-${index}] worker error for ${pending.id}: code=${code}`);
       pending.reject(new ServiceUnavailableError(`AI prediction failed (${code})`));
     } else {
+      const res = msg.result as Record<string, unknown>;
+      const preds = res.predictions as Record<string, unknown> | undefined;
+      console.log(
+        `[ai-worker-${index}] prediction OK: batch=${res.batch_id ?? "?"} ` +
+        `model=${res.model_version ?? "unknown"} ` +
+        `quality=${preds?.predicted_quality_score ?? "?"} ` +
+        `(${durationMs}ms)`,
+      );
       pending.resolve(msg.result as PredictionResponse);
     }
 

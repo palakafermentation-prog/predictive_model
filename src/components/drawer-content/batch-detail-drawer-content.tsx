@@ -13,10 +13,12 @@ interface BatchDetailDrawerContentProps {
 
 const PARAMETER_LABELS: Record<string, string> = {
   rice_polish_ratio: "Polish Ratio (%)",
+  rice_variety: "Rice Variety",
   water_hardness_ppm: "Water Hardness (ppm)",
   water_ph: "Water pH",
   koji_incubation_hours: "Koji Incubation Hours",
   yeast_pitch_rate_cells_ml: "Yeast Pitch Rate (cells/mL)",
+  yeast_strain: "Yeast Strain",
   moromi_duration_days: "Moromi Duration (days)",
   initial_temperature_c: "Initial Temperature (°C)",
 };
@@ -74,18 +76,21 @@ export default function BatchDetailDrawerContent({ id }: BatchDetailDrawerConten
           Parameters
         </h3>
         <dl className="grid grid-cols-2 gap-x-4 gap-y-2">
-          {Object.entries(batch.parameters as Record<string, number>).map(([key, value]) => (
-            <div key={key}>
-              <dt className="text-xs text-muted-foreground">
-                {PARAMETER_LABELS[key] ?? key}
-              </dt>
-              <dd className="text-sm font-medium font-mono">
-                {typeof value === "number" && key === "yeast_pitch_rate_cells_ml"
-                  ? value.toLocaleString()
-                  : value}
-              </dd>
-            </div>
-          ))}
+          {Object.entries(batch.parameters as Record<string, number | string | null | undefined>).map(([key, value]) => {
+            if (value == null || value === "") return null;
+            return (
+              <div key={key}>
+                <dt className="text-xs text-muted-foreground">
+                  {PARAMETER_LABELS[key] ?? key}
+                </dt>
+                <dd className="text-sm font-medium font-mono">
+                  {typeof value === "number" && key === "yeast_pitch_rate_cells_ml"
+                    ? value.toLocaleString()
+                    : String(value)}
+                </dd>
+              </div>
+            );
+          })}
         </dl>
       </div>
 

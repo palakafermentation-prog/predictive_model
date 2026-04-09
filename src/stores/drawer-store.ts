@@ -18,6 +18,7 @@ const drawerConfigs: Record<DrawerContentType, DrawerConfig> = {
   },
   batch_detail: {
     title: "Batch Detail",
+    description: "View input parameters and prediction results for this batch",
     width: "lg",
   },
 };

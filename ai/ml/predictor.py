@@ -50,18 +50,21 @@ def _predict_live(request: PredictionRequest) -> PredictionResponse:
     """
     from palaka_model import infer as palaka_infer
 
-    payload = {
-        "record_tier": 2,
-        "inputs": {
-            "rice_polish_ratio": request.rice_polish_ratio,
-            "koji_incubation_hours": request.koji_incubation_hours,
-            "moromi_duration_days": request.moromi_duration_days,
-            "initial_temperature_c": request.initial_temperature_c,
-            "water_ph": request.water_ph,
-            "water_hardness_ppm": request.water_hardness_ppm,
-            "yeast_pitch_rate_cells_ml": request.yeast_pitch_rate_cells_ml,
-        },
+    inputs: dict[str, float] = {
+        "rice_polish_ratio": request.rice_polish_ratio,
+        "koji_incubation_hours": request.koji_incubation_hours,
+        "moromi_duration_days": request.moromi_duration_days,
+        "initial_temperature_c": request.initial_temperature_c,
+        "water_ph": request.water_ph,
+        "water_hardness_ppm": request.water_hardness_ppm,
     }
+    # Optional — palaka's SimpleImputer handles missing values via median.
+    # rice_variety and yeast_strain are intentionally NOT forwarded to palaka;
+    # they are stored in the DB only and flagged for future model integration.
+    if request.yeast_pitch_rate_cells_ml is not None:
+        inputs["yeast_pitch_rate_cells_ml"] = request.yeast_pitch_rate_cells_ml
+
+    payload = {"record_tier": 2, "inputs": inputs}
 
     result = palaka_infer.predict(payload)
 
@@ -91,6 +94,13 @@ def _predict_live(request: PredictionRequest) -> PredictionResponse:
         qc_thresholds_used=metadata_raw.get("qc_thresholds_used"),
     )
 
+    logger.info(
+        "LIVE prediction complete: batch=%s quality=%.2f model=%s",
+        request.batch_id,
+        data["predicted_quality_score"],
+        metadata_raw.get("model_version", "unknown"),
+    )
+
     return PredictionResponse(
         batch_id=request.batch_id,
         predictions=PredictionPredictions(
@@ -100,6 +110,9 @@ def _predict_live(request: PredictionRequest) -> PredictionResponse:
             estimated_final_acidity=data.get("estimated_final_acidity"),
             estimated_amino_acidity=data["estimated_amino_acidity"],
             predicted_off_flavor_probability=data["predicted_off_flavor_probability"],
+            predicted_texture_astringency=data.get("predicted_texture_astringency"),
+            predicted_alcohol_burn_intensity=data.get("predicted_alcohol_burn_intensity"),
+            predicted_floral_probability=data.get("predicted_floral_probability"),
         ),
         qc_status=qc_status,
         qc_flags=qc_flags,

@@ -23,6 +23,12 @@ const MEDIATOR_FIELDS = [
 
 const PROBABILITY_FIELDS = [
   { key: "predicted_off_flavor_probability", label: "Off-Flavor" },
+  { key: "predicted_floral_probability", label: "Floral" },
+] as const;
+
+const SENSORY_FIELDS = [
+  { key: "predicted_texture_astringency", label: "Texture Astringency" },
+  { key: "predicted_alcohol_burn_intensity", label: "Alcohol Burn Intensity" },
 ] as const;
 
 export function PredictionResults({ response, headingLevel = "h2" }: PredictionResultsProps) {
@@ -95,6 +101,7 @@ export function PredictionResults({ response, headingLevel = "h2" }: PredictionR
             <dl className="space-y-3">
               {PROBABILITY_FIELDS.map(({ key, label }) => {
                 const value = predictions[key];
+                if (value == null) return null;
                 const percent = (value * 100).toFixed(0);
                 const isHighRisk = key === "predicted_off_flavor_probability" && value > 0.3;
                 return (
@@ -118,6 +125,29 @@ export function PredictionResults({ response, headingLevel = "h2" }: PredictionR
           </CardContent>
         </Card>
       </div>
+
+      {/* Sensory Predictions — only shown when live model provides them */}
+      {SENSORY_FIELDS.some(({ key }) => predictions[key] != null) && (
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base">Sensory Predictions</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <dl className="space-y-3">
+              {SENSORY_FIELDS.map(({ key, label }) => {
+                const value = predictions[key];
+                if (value == null) return null;
+                return (
+                  <div key={key} className="flex items-center justify-between">
+                    <dt className="text-sm text-muted-foreground">{label}</dt>
+                    <dd className="text-sm font-medium font-mono">{value.toFixed(2)}</dd>
+                  </div>
+                );
+              })}
+            </dl>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Warnings — model soft-validation notices */}
       {warnings && warnings.length > 0 && (

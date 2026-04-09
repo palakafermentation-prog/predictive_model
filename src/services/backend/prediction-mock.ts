@@ -39,6 +39,9 @@ export function generateMockPrediction(input: PredictionRequest): PredictionResp
   const estimated_final_acidity = Math.round((1.0 + rand(3) * 1.5) * 100) / 100; // 1.0–2.5
   const estimated_amino_acidity = Math.round((0.5 + rand(4) * 1.0) * 100) / 100; // 0.5–1.5
   const predicted_off_flavor_probability = Math.round(rand(8) * 0.4 * 100) / 100;
+  const predicted_texture_astringency = Math.round((1.0 + rand(9) * 3.0) * 100) / 100;
+  const predicted_alcohol_burn_intensity = Math.round((1.0 + rand(10) * 3.0) * 100) / 100;
+  const predicted_floral_probability = Math.round(rand(11) * 0.8 * 10000) / 10000;
 
   // Determine QC status and flags (machine-readable, same as live mode)
   const qc_flags: string[] = [];
@@ -67,6 +70,9 @@ export function generateMockPrediction(input: PredictionRequest): PredictionResp
       estimated_final_acidity,
       estimated_amino_acidity,
       predicted_off_flavor_probability,
+      predicted_texture_astringency,
+      predicted_alcohol_burn_intensity,
+      predicted_floral_probability,
     },
     qc_status,
     qc_flags,

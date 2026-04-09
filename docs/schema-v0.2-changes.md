@@ -54,3 +54,21 @@ Quality scores (1–5) remain valid across all new range extremes.
 | Submit `moromi_duration_days: 120` | Accepted ✓ |
 | Submit `moromi_duration_days: 9` | Rejected (below min) ✓ |
 | Mock prediction at extremes | Score within 1–5 ✓ |
+
+---
+
+## Milestone 2 — Optional Fields (2026-04-09)
+
+Three input-field changes added in response to a product-owner request:
+
+| Field | Change | Notes |
+|-------|--------|-------|
+| `yeast_pitch_rate_cells_ml` | Now **optional** | Too technical for homebrewers and many craft brewers. A tooltip on the form explains the field. When omitted, the live model imputes it via the training median — predictions still succeed. |
+| `rice_variety` | **New**, optional string (≤100 chars) | Free text with dropdown suggestions: Yamada Nishiki, Gohyakumangoku, Omachi, Table rice. |
+| `yeast_strain` | **New**, optional string (≤100 chars) | Free text with dropdown suggestions: Kyokai 7, Kyokai 9, Kyokai 14, EC-1118. |
+
+**Model behavior:** `rice_variety` and `yeast_strain` are validated and saved to the database but are **not** passed to the model at this stage — they are flagged for future model integration when the model begins accepting categorical features.
+
+**No database migration required** — batch parameters are still stored as flexible JSONB.
+
+**CSV template** is dynamically generated from the Zod schema, so the new columns appear automatically in `batch_template.csv`. Empty cells for any of the three optional fields are accepted.

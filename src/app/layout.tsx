@@ -42,7 +42,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={`${fontHeading.variable} ${fontBody.variable} ${fontMono.variable} font-body`}>
+      <body className={`${fontHeading.variable} ${fontBody.variable} ${fontMono.variable} font-body min-w-[420px]`}>
         <ThemeProvider
           attribute="class"
           defaultTheme="system"

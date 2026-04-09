@@ -53,6 +53,9 @@ def generate_mock_prediction(request: PredictionRequest) -> PredictionResponse:
     estimated_final_acidity = round(1.0 + rand(3) * 1.5, 2)  # 1.0–2.5
     estimated_amino_acidity = round(0.5 + rand(4) * 1.0, 2)  # 0.5–1.5
     predicted_off_flavor_probability = round(rand(8) * 0.4, 2)
+    predicted_texture_astringency = round(1.0 + rand(9) * 3.0, 2)
+    predicted_alcohol_burn_intensity = round(1.0 + rand(10) * 3.0, 2)
+    predicted_floral_probability = round(rand(11) * 0.8, 4)
 
     # Determine QC status and flags (machine-readable, same as live mode)
     qc_flags: list[str] = []
@@ -79,6 +82,9 @@ def generate_mock_prediction(request: PredictionRequest) -> PredictionResponse:
             estimated_final_acidity=estimated_final_acidity,
             estimated_amino_acidity=estimated_amino_acidity,
             predicted_off_flavor_probability=predicted_off_flavor_probability,
+            predicted_texture_astringency=predicted_texture_astringency,
+            predicted_alcohol_burn_intensity=predicted_alcohol_burn_intensity,
+            predicted_floral_probability=predicted_floral_probability,
         ),
         qc_status=qc_status,
         qc_flags=qc_flags,
