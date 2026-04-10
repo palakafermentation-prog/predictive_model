@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Source_Serif_4, DM_Sans, JetBrains_Mono } from "next/font/google";
 import { ThemeProvider } from "@/components/theme/theme-provider";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import { AppDrawer } from "@/components/layout/app-drawer";
 import { AuthGateDialog } from "@/components/ui/auth-gate-dialog";
 import { Toaster } from "@/components/ui/toaster";
@@ -49,10 +50,12 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          {children}
-          <AppDrawer />
-          <AuthGateDialog />
-          <Toaster />
+          <TooltipProvider delayDuration={200}>
+            {children}
+            <AppDrawer />
+            <AuthGateDialog />
+            <Toaster />
+          </TooltipProvider>
         </ThemeProvider>
       </body>
     </html>

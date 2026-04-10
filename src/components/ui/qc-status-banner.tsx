@@ -2,15 +2,17 @@
 
 import { cn } from "@/lib/utils";
 import { Alert } from "@/components/ui/alert";
+import { InfoTooltip } from "@/components/ui/info-tooltip";
 
 interface QcStatusBannerProps {
   qcStatus: string;
   qcFlags: string[];
+  tooltip?: string;
 }
 
 const QC_STATUS_LABELS: Record<string, { icon: string; text: string }> = {
-  pass: { icon: "✅", text: "Optimal Spec" },
-  review: { icon: "⚠️", text: "Needs Review" },
+  pass: { icon: "✅", text: "Inputs Valid" },
+  review: { icon: "⚠️", text: "Input Invalid" },
 };
 
 const QC_FLAG_LABELS: Record<string, string> = {
@@ -36,7 +38,7 @@ const severityToVariant = {
   alert: "qc-alert",
 } as const;
 
-export function QcStatusBanner({ qcStatus, qcFlags }: QcStatusBannerProps) {
+export function QcStatusBanner({ qcStatus, qcFlags, tooltip }: QcStatusBannerProps) {
   const severity = getSeverity(qcStatus);
   const label = QC_STATUS_LABELS[qcStatus];
   const variant = severityToVariant[severity];
@@ -44,13 +46,16 @@ export function QcStatusBanner({ qcStatus, qcFlags }: QcStatusBannerProps) {
   return (
     <div className="space-y-2" role="status">
       <Alert variant={variant} className="font-semibold">
-        {label ? (
-          <>
-            <span aria-hidden="true">{label.icon}</span> {label.text}
-          </>
-        ) : (
-          qcStatus
-        )}
+        <span className="inline-flex items-center gap-1 leading-none">
+          {label ? (
+            <>
+              <span aria-hidden="true">{label.icon}</span> {label.text}
+            </>
+          ) : (
+            qcStatus
+          )}
+          {tooltip && <InfoTooltip text={tooltip} label={label?.text ?? "QC Status"} />}
+        </span>
       </Alert>
       {qcFlags.length > 0 && (
         <ul className="space-y-1 list-none p-0">

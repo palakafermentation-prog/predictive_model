@@ -10,11 +10,10 @@ import { saveBatch } from "@/services/frontend/batch";
 import { useSession } from "@/hooks/use-session";
 import { usePredictionQueue } from "@/hooks/use-prediction-queue";
 import { toast } from "sonner";
-import { Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/components/ui/form";
-import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
+import { InfoTooltip } from "@/components/ui/info-tooltip";
 import { PredictionResults } from "@/components/prediction-results";
 import { QueueStatusDisplay } from "@/components/queue-status";
 
@@ -35,6 +34,7 @@ type TextSuggestField = {
   suggestions: readonly string[];
   placeholder?: string;
   optional?: boolean;
+  tooltip?: string;
 };
 
 type Field = NumberField | TextSuggestField;
@@ -43,7 +43,15 @@ const INPUT_GROUPS: { title: string; fields: Field[] }[] = [
   {
     title: "Rice",
     fields: [
-      { type: "number", name: "rice_polish_ratio", label: "Polish Ratio", unit: "%", step: 1 },
+      {
+        type: "number",
+        name: "rice_polish_ratio",
+        label: "Polish Ratio",
+        unit: "%",
+        step: 1,
+        tooltip:
+          "The percentage of rice grain remaining after milling. Lower values (more polishing) are associated with cleaner, more delicate flavor. Valid range: 40–75%. Current model trained on 26 records — predictions are most reliable within this range.",
+      },
       {
         type: "text-suggest",
         name: "rice_variety",
@@ -51,20 +59,46 @@ const INPUT_GROUPS: { title: string; fields: Field[] }[] = [
         optional: true,
         suggestions: ["Yamada Nishiki", "Gohyakumangoku", "Omachi", "Table rice"],
         placeholder: "e.g. Yamada Nishiki",
+        tooltip:
+          "Annotative only — not used in current model predictions. Recorded for future model training. Common varieties: Yamada Nishiki (premium, ginjo), Gohyakumangoku (clean, light), Omachi (rich, complex), table rice (widely available).",
       },
     ],
   },
   {
     title: "Water",
     fields: [
-      { type: "number", name: "water_hardness_ppm", label: "Hardness", unit: "ppm", step: 1 },
-      { type: "number", name: "water_ph", label: "pH", unit: "", step: 0.1 },
+      {
+        type: "number",
+        name: "water_hardness_ppm",
+        label: "Hardness",
+        unit: "ppm",
+        step: 1,
+        tooltip:
+          "Total dissolved calcium and magnesium in parts per million. Soft water (under 50 ppm) is associated with delicate ginjo styles. Harder water produces more robust, drier sake. Valid range: 5–100 ppm. Values above 100 ppm are outside typical sake production ranges.",
+      },
+      {
+        type: "number",
+        name: "water_ph",
+        label: "pH",
+        unit: "",
+        step: 0.1,
+        tooltip:
+          "pH of the source water before fermentation begins. Water pH normalizes quickly once in contact with rice and koji — this value is primarily a proxy for mineral content and buffering capacity. Typical sake brewing water: 6.5–7.2. Valid range: 3.0–8.0.",
+      },
     ],
   },
   {
     title: "Koji",
     fields: [
-      { type: "number", name: "koji_incubation_hours", label: "Incubation Hours", unit: "hrs", step: 1 },
+      {
+        type: "number",
+        name: "koji_incubation_hours",
+        label: "Incubation Hours",
+        unit: "hrs",
+        step: 1,
+        tooltip:
+          "Hours of Aspergillus oryzae incubation on steamed rice. Koji produces the enzymes that convert rice starch to fermentable sugars. Typical range: 40–54 hrs for premium styles, 36–48 hrs for standard. Minimum 12 hrs (boundary of current training data).",
+      },
       {
         type: "number",
         name: "yeast_pitch_rate_cells_ml",
@@ -73,7 +107,7 @@ const INPUT_GROUPS: { title: string; fields: Field[] }[] = [
         step: 1000000,
         optional: true,
         tooltip:
-          "The concentration of yeast cells added at the start of fermentation. Optional — leave blank if unknown and the model will estimate it.",
+          "Optional. Number of viable yeast cells per milliliter at inoculation. Most homebrewers and many craft brewers do not measure this directly. Leave blank if unknown — the model will use a default value. Typical range: 8–100 million cells/mL.",
       },
       {
         type: "text-suggest",
@@ -82,14 +116,32 @@ const INPUT_GROUPS: { title: string; fields: Field[] }[] = [
         optional: true,
         suggestions: ["Kyokai 7", "Kyokai 9", "Kyokai 14", "EC-1118"],
         placeholder: "e.g. Kyokai 7",
+        tooltip:
+          "Annotative only — not used in current model predictions. Recorded for future model training. Common strains: Kyokai 7 (classic, full), Kyokai 9 (fruity, floral), EC-1118 (neutral, dry), Lalvin 71B (banana/fruity).",
       },
     ],
   },
   {
     title: "Fermentation",
     fields: [
-      { type: "number", name: "moromi_duration_days", label: "Moromi Duration", unit: "days", step: 1 },
-      { type: "number", name: "initial_temperature_c", label: "Initial Temp", unit: "°C", step: 0.5 },
+      {
+        type: "number",
+        name: "moromi_duration_days",
+        label: "Moromi Duration",
+        unit: "days",
+        step: 1,
+        tooltip:
+          "Total days of main fermentation. Longer fermentation at low temperature is associated with ginjo-style aromatics. Valid range for current model: 20–45 days.",
+      },
+      {
+        type: "number",
+        name: "initial_temperature_c",
+        label: "Initial Temp",
+        unit: "°C",
+        step: 0.5,
+        tooltip:
+          "Water temperature at the start of main fermentation. Cold fermentation (8–12°C) promotes floral ester production. Warm fermentation (14–18°C) produces fuller body and faster completion. Valid range: 8–18°C.",
+      },
     ],
   },
 ];
@@ -203,24 +255,7 @@ export function PredictionForm() {
                               </span>
                             )}
                           </FormLabel>
-                          {f.tooltip && (
-                            <TooltipProvider delayDuration={200}>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <button
-                                    type="button"
-                                    className="inline-flex items-center justify-center p-1 -m-1 text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm"
-                                    aria-label={`About ${f.label}`}
-                                  >
-                                    <Info className="h-3.5 w-3.5" aria-hidden="true" />
-                                  </button>
-                                </TooltipTrigger>
-                                <TooltipContent className="max-w-xs text-xs">
-                                  {f.tooltip}
-                                </TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
-                          )}
+                          {f.tooltip && <InfoTooltip text={f.tooltip} label={f.label} />}
                         </div>
                         <FormControl>
                           <Input
@@ -247,14 +282,17 @@ export function PredictionForm() {
                       const listId = `suggest-${f.name}`;
                       return (
                         <FormItem>
-                          <FormLabel className="text-sm">
-                            {f.label}
-                            {f.optional && (
-                              <span className="ml-1 text-xs text-muted-foreground font-normal">
-                                (optional)
-                              </span>
-                            )}
-                          </FormLabel>
+                          <div className="flex items-center gap-1">
+                            <FormLabel className="text-sm">
+                              {f.label}
+                              {f.optional && (
+                                <span className="ml-1 text-xs text-muted-foreground font-normal">
+                                  (optional)
+                                </span>
+                              )}
+                            </FormLabel>
+                            {f.tooltip && <InfoTooltip text={f.tooltip} label={f.label} />}
+                          </div>
                           <FormControl>
                             <Input
                               type="text"
