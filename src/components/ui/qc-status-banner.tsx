@@ -54,7 +54,13 @@ export function QcStatusBanner({ qcStatus, qcFlags, tooltip }: QcStatusBannerPro
           ) : (
             qcStatus
           )}
-          {tooltip && <InfoTooltip text={tooltip} label={label?.text ?? "QC Status"} />}
+          {tooltip && (
+            <InfoTooltip
+              text={tooltip}
+              label={label?.text ?? "QC Status"}
+              className="text-current hover:text-current"
+            />
+          )}
         </span>
       </Alert>
       {qcFlags.length > 0 && (

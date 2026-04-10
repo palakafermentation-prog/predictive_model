@@ -255,7 +255,9 @@ export function PredictionForm() {
                               </span>
                             )}
                           </FormLabel>
-                          {f.tooltip && <InfoTooltip text={f.tooltip} label={f.label} />}
+                          {f.tooltip && (
+                            <InfoTooltip text={f.tooltip} label={f.label} className="top-[1px]" />
+                          )}
                         </div>
                         <FormControl>
                           <Input
@@ -291,7 +293,9 @@ export function PredictionForm() {
                                 </span>
                               )}
                             </FormLabel>
-                            {f.tooltip && <InfoTooltip text={f.tooltip} label={f.label} />}
+                            {f.tooltip && (
+                              <InfoTooltip text={f.tooltip} label={f.label} className="top-[1px]" />
+                            )}
                           </div>
                           <FormControl>
                             <Input

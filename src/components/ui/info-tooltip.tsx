@@ -39,7 +39,7 @@ export function InfoTooltip({ text, label, className }: InfoTooltipProps) {
           // makes the icon respond to mouse clicks and touch taps too.
           onClick={() => setOpen(true)}
           className={cn(
-            "relative top-[1px] inline-flex items-center justify-center p-1 -mt-1 -mr-1 -mb-1 ml-[2px] cursor-pointer text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm",
+            "relative inline-flex items-center justify-center p-1 -mt-1 -mr-1 -mb-1 ml-[2px] cursor-pointer text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm",
             className
           )}
           aria-label={`About ${label}`}
