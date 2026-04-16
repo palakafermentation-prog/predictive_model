@@ -50,7 +50,7 @@ const INPUT_GROUPS: { title: string; fields: Field[] }[] = [
         unit: "%",
         step: 1,
         tooltip:
-          "The percentage of rice grain remaining after milling. Lower values (more polishing) are associated with cleaner, more delicate flavor. Valid range: 40–75%. Current model trained on 26 records — predictions are most reliable within this range.",
+          "Percentage of rice grain remaining after milling (seimaibuai). Lower values indicate more polishing and are associated with cleaner, more delicate flavor profiles. Current model training data is limited to a polish ratio range of 50–75%. The model will accept a wider range of inputs as training data expands.",
       },
       {
         type: "text-suggest",
